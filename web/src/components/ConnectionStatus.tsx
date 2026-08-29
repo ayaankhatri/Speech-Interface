@@ -5,11 +5,6 @@ interface Props {
   onToggle: () => void;
 }
 
-/**
- * Top-left connection pill. Green dot + "Connected" when the hardware link is
- * up, red dot + "Disconnected" otherwise. Clickable to simulate plugging /
- * unplugging the ESP32.
- */
 export default function ConnectionStatus({ connected, onToggle }: Props) {
   return (
     <button

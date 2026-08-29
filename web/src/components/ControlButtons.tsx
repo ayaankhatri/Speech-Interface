@@ -9,8 +9,6 @@ interface Props {
   onClear: () => void;
 }
 
-// All four action buttons share the exact same rendered size (source SVGs are
-// 119x55). The power button keeps its own square-ish aspect.
 const BTN_W = 112;
 const BTN_H = 52;
 
@@ -22,7 +20,6 @@ interface ButtonSpec {
   active?: boolean;
 }
 
-/** Evenly-spaced control buttons along the bottom of the screen. */
 export default function ControlButtons({
   streaming,
   onPower,
@@ -37,20 +34,19 @@ export default function ControlButtons({
     { key: "history", src: "/assets/btn-history.svg", alt: "History", onClick: onHistory },
     { key: "clear", src: "/assets/btn-clear.svg", alt: "Clear", onClick: onClear },
   ];
-
   return (
     <div
       className="absolute flex items-center justify-center gap-6"
       style={{ left: SCREEN.left, top: CONTROLS.top, width: SCREEN.width, height: CONTROLS.height }}
     >
-      {/* Power button, to the left of START — sits on top of a star burst. */}
+      {}
       <button
         type="button"
         onClick={onPower}
         aria-label="Power"
         className="relative outline-none transition-transform duration-100 hover:scale-110 active:scale-95"
       >
-        {/* Star sits behind the power button. */}
+        {}
         <img
           src="/assets/stars.svg"
           alt=""

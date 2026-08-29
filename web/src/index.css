@@ -15,13 +15,11 @@ body {
   overflow: hidden;
 }
 
-/* Keep the pixel-art button/sticker art crisp when scaled. */
 .pixelated {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
 
-/* --- Dino runner animations --- */
 @keyframes dinoJump {
   0% {
     transform: translateY(0);
@@ -40,15 +38,32 @@ body {
   animation: dinoJump 0.55s ease-out;
 }
 
-@keyframes dinoWalk {
+@keyframes dinoStepA {
   0%,
-  100% {
+  50% {
     transform: translateY(0);
   }
-  50% {
+  50.001%,
+  100% {
     transform: translateY(-2px);
   }
 }
-.dino-walk {
-  animation: dinoWalk 0.28s steps(2, end) infinite;
+
+@keyframes dinoStepB {
+  0%,
+  50% {
+    transform: translateY(-2px);
+  }
+  50.001%,
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.dino-step-a {
+  animation: dinoStepA 0.28s linear infinite;
+}
+
+.dino-step-b {
+  animation: dinoStepB 0.28s linear infinite;
 }

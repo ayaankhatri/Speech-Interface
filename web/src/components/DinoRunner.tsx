@@ -1,26 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 
 interface Props {
-  /** Inner width of the detected-words box floor the dino patrols. */
   trackWidth: number;
-  /** Left edge of the roam range — where the written words currently end. */
   minX: number;
-  /** Increments whenever a new word is detected → dino jumps. */
   jumpSignal: number;
 }
 
-// dino.svg is 109x119 — keep that aspect. (Doubled from 50 → 100.)
-const DINO_H = 100;
+const DINO_H = 128;
 const DINO_W = Math.round((DINO_H * 109) / 119);
-const STEP = 3; // px per tick
+const SPRITE_INK_BOTTOM = 0.6489;
+const FLOOR_OFFSET = Math.round(DINO_H * (1 - SPRITE_INK_BOTTOM)) - 1;
+const HIP_Y = 58.6;
+const LEG_SPLIT_X = 51;
+const SEAM_OVERLAP = 1.5;
+const STEP = 3;
 const TICK_MS = 45;
 
-/**
- * The dino patrols the floor of the "Detected Word" box, roaming between where
- * the written words end (minX) and the right edge of the box. It only walks
- * while hovered, turns around at either edge, and hops whenever a new word
- * arrives.
- */
+const LAYER_CLIP = {
+  body: `inset(0px 0px ${DINO_H - HIP_Y - SEAM_OVERLAP}px 0px)`,
+  frontLeg: `inset(${HIP_Y}px ${DINO_W - LEG_SPLIT_X - 0.7}px 0px 0px)`,
+  rearLeg: `inset(${HIP_Y}px 0px 0px ${LEG_SPLIT_X - 0.7}px)`,
+} as const;
+
 export default function DinoRunner({ trackWidth, minX, jumpSignal }: Props) {
   const maxX = Math.max(minX, trackWidth - DINO_W);
   const [x, setX] = useState(minX);
@@ -29,12 +30,10 @@ export default function DinoRunner({ trackWidth, minX, jumpSignal }: Props) {
   const [jumping, setJumping] = useState(false);
   const jumpTimer = useRef<number | null>(null);
 
-  // Keep the dino inside the (possibly shrinking/growing) roam range.
   useEffect(() => {
     setX((prev) => Math.min(Math.max(prev, minX), maxX));
   }, [minX, maxX]);
 
-  // Walk forward while hovered, bouncing between the two edges.
   useEffect(() => {
     if (!hovered) return;
     const id = window.setInterval(() => {
@@ -53,7 +52,6 @@ export default function DinoRunner({ trackWidth, minX, jumpSignal }: Props) {
     return () => window.clearInterval(id);
   }, [hovered, dir, minX, maxX]);
 
-  // Jump on every new word.
   useEffect(() => {
     if (jumpSignal === 0) return;
     setJumping(true);
@@ -64,29 +62,38 @@ export default function DinoRunner({ trackWidth, minX, jumpSignal }: Props) {
     };
   }, [jumpSignal]);
 
+  const walking = hovered && !jumping;
+
   return (
     <div
-      className="absolute bottom-1 cursor-pointer"
-      style={{ left: x, width: DINO_W, height: DINO_H }}
+      className="absolute cursor-pointer"
+      style={{ left: x, bottom: -FLOOR_OFFSET, width: DINO_W, height: DINO_H }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       title="hover to walk · new word to jump"
     >
       <div className={jumping ? "dino-jump" : undefined}>
         <div
-          className={hovered && !jumping ? "dino-walk" : undefined}
-          /* Face the travel direction: right when walking left→right (dir=1). */
-          style={{ transform: `scaleX(${dir})` }}
+          className="relative select-none"
+          style={{ width: DINO_W, height: DINO_H, transform: `scaleX(${-dir})` }}
         >
-          <img
-            src="/assets/dino.svg"
-            alt="dino"
-            draggable={false}
-            className="select-none"
-            style={{ width: DINO_W, height: DINO_H }}
-          />
+          <DinoLayer clip={LAYER_CLIP.body} />
+          <DinoLayer clip={LAYER_CLIP.frontLeg} className={walking ? "dino-step-a" : undefined} />
+          <DinoLayer clip={LAYER_CLIP.rearLeg} className={walking ? "dino-step-b" : undefined} />
         </div>
       </div>
     </div>
+  );
+}
+
+function DinoLayer({ clip, className }: { clip: string; className?: string }) {
+  return (
+    <img
+      src="/assets/dino.svg"
+      alt=""
+      draggable={false}
+      className={`absolute left-0 top-0 select-none ${className ?? ""}`}
+      style={{ width: DINO_W, height: DINO_H, clipPath: clip }}
+    />
   );
 }
