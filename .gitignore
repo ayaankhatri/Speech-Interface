@@ -23,3 +23,6 @@ models/**
 
 # Arduino build output
 firmware/**/build/
+
+# Personal scratch notes — not shared
+myWorkspace/
