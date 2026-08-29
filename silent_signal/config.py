@@ -11,6 +11,7 @@ MODEL_PATH = MODEL_DIR / "model.joblib"
 BAUD = 115200
 SAMPLE_HZ = 500
 ADC_MAX = 4095  # ESP32 analogReadResolution(12)
+N_CHANNELS = 2  # EMG sensors the firmware streams, one column per sample line
 
 # Capture Time
 # One silently-mouthed word. Must match between collect.py and live.py:
@@ -25,7 +26,8 @@ SMOOTH_MS = 50  # rectified-signal moving-average width -> envelope
 SMOOTH_SAMPLES = max(1, int(SMOOTH_MS * SAMPLE_HZ / 1000))
 ACTIVE_FRAC = 0.5  # "active" = envelope above this fraction of the window peak
 N_SLICES = 3  # envelope shape over time
-N_FEATURES = 8 + N_SLICES * 2  # 8 whole-window + 2 per slice = 14
+N_FEATURES_PER_CH = 8 + N_SLICES * 2  # 8 whole-window + 2 per slice = 14
+N_FEATURES = N_CHANNELS * N_FEATURES_PER_CH  # channels concatenated = 28
 
 # Onset Detection
 RING_S = 2.0  # serial ring buffer depth
