@@ -5,6 +5,10 @@
 Read the confusion matrix, not the headline accuracy. Two words that keep
 swapping need more or cleaner data for that pair — or one of them dropped from
 the demo vocabulary — not more trees.
+
+The saved bundle carries the feature count and the classifier window length it
+was fitted at, so live.py can refuse a model whose front end no longer matches
+config rather than predicting against a layout it was never trained on.
 """
 from __future__ import annotations
 
@@ -22,6 +26,7 @@ from .dataset import load_dataset
 from .features import FEATURE_NAMES
 
 
+# Reporting
 def print_confusion(y_true: np.ndarray, y_pred: np.ndarray, labels: list[str]) -> None:
     cm = confusion_matrix(y_true, y_pred, labels=labels)
     width = max(len(w) for w in labels) + 1
@@ -32,6 +37,7 @@ def print_confusion(y_true: np.ndarray, y_pred: np.ndarray, labels: list[str]) -
         print(f"{word:<{width}}" + " ".join(f"{n:>5}" for n in row))
 
 
+# CLI
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--folds", type=int, default=cfg.CV_FOLDS)
@@ -71,11 +77,17 @@ def main(argv: list[str] | None = None) -> int:
 
     cfg.MODEL_DIR.mkdir(parents=True, exist_ok=True)
     joblib.dump(
-        {"clf": clf, "labels": labels, "n_features": cfg.N_FEATURES, "window_s": cfg.WINDOW_S},
+        {
+            "clf": clf,
+            "labels": labels,
+            "n_features": cfg.N_FEATURES,
+            "classify_s": cfg.CLASSIFY_S,
+        },
         cfg.MODEL_PATH,
     )
     print(f"\nsaved {cfg.MODEL_PATH.relative_to(cfg.ROOT)}")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

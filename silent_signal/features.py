@@ -1,14 +1,24 @@
-"""feature extraction — one envelope window to a fixed vector (default 28 dims)
+"""feature extraction — one capture to a fixed vector (default 28 dims)
 
 The single shared front end for training and live inference. Both paths must
-call `features_from_raw` (or `envelope` then `features`) so that a vector built
-during collection and a vector built during the live loop mean the same thing.
-Any change here invalidates models/model.joblib — retrain after editing.
+call `features_from_raw`, so that a vector built during collection and a vector
+built during the live loop mean the same thing. Any change here invalidates
+models/model.joblib — retrain after editing.
 
 Windows are 2-D, shape (samples, channels). Each channel is reduced to the same
 block of N_FEATURES_PER_CH stats independently and the blocks are concatenated,
 so channel order is part of the contract: column 0 stays column 0 for the life
 of a model. A 1-D input is treated as a single channel.
+
+A capture is WINDOW_SAMPLES long but the classifier reads only the
+CLASSIFY_SAMPLES that follow the articulation. Collection starts its window on a
+countdown and the live loop starts its window on an onset, so the burst sits at
+a different offset in each; without a shared rule for choosing where to cut, the
+two paths would hand the model differently aligned signals and accuracy would
+fall with nothing raising an error. `align_window` is that rule: cut from
+PRE_ROLL_SAMPLES before the combined envelope first reaches ALIGN_FRAC of its
+peak. The slack between WINDOW_SAMPLES and CLASSIFY_SAMPLES is what gives the
+cut room to move.
 """
 from __future__ import annotations
 
@@ -16,6 +26,7 @@ import numpy as np
 
 from . import config as cfg
 
+# Feature Names
 _PER_CHANNEL_NAMES: list[str] = [
     "mean",
     "std",
@@ -36,21 +47,21 @@ FEATURE_NAMES: list[str] = [
 assert len(FEATURE_NAMES) == cfg.N_FEATURES
 
 
+# Shaping
 def as_2d(x: np.ndarray) -> np.ndarray:
-    """(samples,) or (samples, channels) -> (samples, channels)."""
     a = np.asarray(x, dtype=np.float64)
     return a[:, None] if a.ndim == 1 else a
 
 
-def fit_window(x: np.ndarray, n: int = cfg.WINDOW_SAMPLES) -> np.ndarray:
+def fit_window(x: np.ndarray, n: int = cfg.CLASSIFY_SAMPLES) -> np.ndarray:
     a = as_2d(x)
     if a.shape[0] >= n:
         return a[:n]
     return np.vstack([a, np.zeros((n - a.shape[0], a.shape[1]), dtype=np.float64)])
 
 
+# Envelope
 def envelope(raw: np.ndarray) -> np.ndarray:
-    """Rectify about each channel's own mean, then moving-average."""
     a = as_2d(raw)
     if a.shape[0] == 0:
         return a
@@ -68,10 +79,27 @@ def envelope(raw: np.ndarray) -> np.ndarray:
 
 
 def combine(env: np.ndarray) -> np.ndarray:
-    """Channels -> one trace for onset detection: whichever site fires first wins."""
     return as_2d(env).max(axis=1)
 
 
+# Alignment
+def align_start(raw: np.ndarray) -> int:
+    a = as_2d(raw)
+    if a.shape[0] == 0:
+        return 0
+    trace = combine(envelope(a))
+    peak = float(trace.max())
+    above = np.flatnonzero(trace >= cfg.ALIGN_FRAC * peak) if peak > 0 else np.empty(0, dtype=int)
+    start = max(0, int(above[0]) - cfg.PRE_ROLL_SAMPLES) if above.size else 0
+    return min(start, max(0, a.shape[0] - cfg.CLASSIFY_SAMPLES))
+
+
+def align_window(raw: np.ndarray) -> np.ndarray:
+    a = as_2d(raw)
+    return fit_window(a[align_start(a) :])
+
+
+# Vector
 def _channel_features(e: np.ndarray) -> list[float]:
     peak = float(e.max())
     dt = 1.0 / cfg.SAMPLE_HZ
@@ -110,4 +138,4 @@ def features(env: np.ndarray) -> np.ndarray:
 
 
 def features_from_raw(raw: np.ndarray) -> np.ndarray:
-    return features(envelope(fit_window(raw)))
+    return features(envelope(align_window(raw)))

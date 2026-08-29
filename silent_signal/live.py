@@ -5,6 +5,17 @@
 Rendering is not this module's job: it emits events and ui.py draws them. The
 default sink prints one line per event so the loop is usable before the
 dashboard exists.
+
+Captures are addressed by absolute stream position, never by index into the
+ring buffer, because the buffer only holds the last RING_S seconds and slides
+out from under any index taken against it. The reader hands back its samples
+and its counter together, and the onset offset is added to the start of the
+chunk it was found in.
+
+Predictions go through features_from_raw, the same entry point training uses.
+Feeding a raw window to `features` instead would produce statistics of ADC
+counts against a model fitted on envelope statistics, which predicts confidently
+and wrongly rather than failing.
 """
 from __future__ import annotations
 
@@ -18,7 +29,7 @@ import numpy as np
 
 from . import config as cfg
 from .action import Speaker
-from .features import combine, envelope, features
+from .features import combine, envelope, features_from_raw
 from .onset import OnsetDetector
 from .serial_reader import SerialReader
 
@@ -26,6 +37,7 @@ Event = dict
 Sink = Callable[[Event], None]
 
 
+# Output
 def print_sink(event: Event) -> None:
     kind = event["kind"]
     if kind == "prediction":
@@ -36,6 +48,7 @@ def print_sink(event: Event) -> None:
         print(f"  {event['message']}")
 
 
+# Model
 def load_model(path=cfg.MODEL_PATH):
     if not path.exists():
         raise FileNotFoundError(f"{path} missing — run: python -m silent_signal.train")
@@ -44,13 +57,15 @@ def load_model(path=cfg.MODEL_PATH):
         raise ValueError(
             f"model has {bundle['n_features']} features, config says {cfg.N_FEATURES}. Retrain."
         )
-    if abs(bundle["window_s"] - cfg.WINDOW_S) > 1e-9:
+    if abs(bundle["classify_s"] - cfg.CLASSIFY_S) > 1e-9:
         raise ValueError(
-            f"model trained at WINDOW_S={bundle['window_s']}s, config says {cfg.WINDOW_S}s. Retrain."
+            f"model trained at CLASSIFY_S={bundle['classify_s']}s, "
+            f"config says {cfg.CLASSIFY_S}s. Retrain."
         )
     return bundle
 
 
+# Capture
 def slice_absolute(buf: np.ndarray, end_total: int, start: int, length: int) -> np.ndarray | None:
     offset = len(buf) - (end_total - start)
     if offset < 0 or offset + length > len(buf):
@@ -77,24 +92,22 @@ def run(port: str, sink: Sink = print_sink, speak: bool = True, model_path=cfg.M
 
         while True:
             time.sleep(0.05)
-            buf = reader.snapshot()
-            end_total = reader.total_samples
+            buf, end_total = reader.read()
             if len(buf) == 0:
                 continue
 
-            # Onset watches one combined trace; the classifier still sees both.
             mono = combine(envelope(buf))
             n_new = min(end_total - last_total, len(mono))
             last_total = end_total
 
             if pending is None and n_new > 0:
-                trigger = detector.feed(mono[len(mono) - n_new :])
-                if trigger is not None:
+                chunk_start = end_total - n_new
+                offset = detector.feed(mono[len(mono) - n_new :])
+                if offset is not None:
+                    trigger = chunk_start + offset
                     pending = max(0, trigger - cfg.PRE_ROLL_SAMPLES - detector.min_samples)
 
-            if pending is None:
-                continue
-            if end_total < pending + cfg.WINDOW_SAMPLES:
+            if pending is None or end_total < pending + cfg.WINDOW_SAMPLES:
                 continue
 
             window = slice_absolute(buf, end_total, pending, cfg.WINDOW_SAMPLES)
@@ -103,7 +116,7 @@ def run(port: str, sink: Sink = print_sink, speak: bool = True, model_path=cfg.M
                 sink({"kind": "status", "message": "capture missed — ring overran"})
                 continue
 
-            proba = clf.predict_proba(features(window).reshape(1, -1))[0]
+            proba = clf.predict_proba(features_from_raw(window).reshape(1, -1))[0]
             i = int(np.argmax(proba))
             word, confidence = labels[i], float(proba[i])
 
@@ -136,6 +149,7 @@ def main(argv: list[str] | None = None) -> int:
     except (FileNotFoundError, ValueError) as exc:
         print(exc)
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

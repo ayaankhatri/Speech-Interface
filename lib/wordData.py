@@ -1,7 +1,10 @@
-"""vocabulary — word lists and the carrier phrase each word speaks as"""
+"""vocabulary — word lists and the carrier phrase each word speaks as
 
-# Validate the whole pipeline on CORE_WORDS first; only widen to
-# FULL_WORDS once the confusion matrix on the core set is clean.
+Validate the whole pipeline on CORE_WORDS first; only widen to FULL_WORDS once
+the confusion matrix on the core set is clean.
+"""
+
+# Word Lists
 CORE_WORDS = [
     "yes",
     "no",
@@ -25,10 +28,9 @@ FULL_WORDS = CORE_WORDS + [
     "tired",
 ]
 
-# Active vocabulary. Point at FULL_WORDS once the core set separates.
 WORDS = CORE_WORDS
 
-# Fills in context before later development
+# Carrier Phrases
 CARRIER = {
     "yes": "Yes",
     "no": "No",
@@ -49,7 +51,7 @@ CARRIER = {
     "okay": "Okay",
 }
 
-# Every word must be speakable, or the action layer has nothing to say.
+# Validation
 _missing = [w for w in FULL_WORDS if w not in CARRIER]
 if _missing:
     raise ValueError(f"CARRIER missing entries for: {_missing}")

@@ -6,6 +6,9 @@ EMG channel, in the same order the firmware prints them:
     0,1873,1902
     1,1881,1898
     ...
+
+A truncated trailing line from an interrupted session costs one row, and a
+capture too short to be a word costs one file, rather than the whole run.
 """
 from __future__ import annotations
 
@@ -19,8 +22,6 @@ from .features import features_from_raw
 
 
 def read_capture(path: Path) -> np.ndarray:
-    """One capture file -> (samples, channels). The header row fails the float
-    conversion and is skipped along with any truncated trailing line."""
     rows: list[list[float]] = []
     with path.open(newline="") as fh:
         for row in csv.reader(fh):

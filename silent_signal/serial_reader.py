@@ -8,6 +8,13 @@ a daemon thread drains the port into a fixed-size ring and callers take
 snapshots of it.
 
 Snapshots are always 2-D, shape (samples, channels), even for one channel.
+
+`total_samples` counts every sample ever accepted, including ones already
+pushed out of the ring, so it is an absolute position in the stream rather than
+an index into the buffer. Callers that need both must use `read`, which takes
+them under one lock: fetching the buffer and the counter separately lets the
+reader thread append in between, and every index derived from the pair is then
+off by however many samples landed in the gap.
 """
 from __future__ import annotations
 
@@ -20,8 +27,6 @@ import serial
 
 from . import config as cfg
 
-# Accept tab, space, or comma between columns so a firmware tweak to the
-# separator does not silently drop every sample.
 _SPLIT = re.compile(r"[,\s]+")
 
 
@@ -47,6 +52,7 @@ class SerialReader:
         self.total_samples = 0
         self.malformed = 0
 
+    # Lifecycle
     def start(self) -> "SerialReader":
         if self._thread is not None:
             return self
@@ -66,14 +72,18 @@ class SerialReader:
     def __exit__(self, *exc) -> None:
         self.stop()
 
-    def snapshot(self, n: int | None = None) -> np.ndarray:
-        """Most recent samples as (samples, channels)."""
+    # Buffer access
+    def read(self, n: int | None = None) -> tuple[np.ndarray, int]:
         with self._lock:
             rows = list(self._ring)
+            total = self.total_samples
         if not rows:
-            return np.empty((0, self.channels), dtype=np.float64)
+            return np.empty((0, self.channels), dtype=np.float64), total
         buf = np.asarray(rows, dtype=np.float64)
-        return buf if n is None else buf[-n:]
+        return (buf if n is None else buf[-n:]), total
+
+    def snapshot(self, n: int | None = None) -> np.ndarray:
+        return self.read(n)[0]
 
     def clear(self) -> None:
         with self._lock:
@@ -91,6 +101,7 @@ class SerialReader:
             waited += step
         return False
 
+    # Stream
     def _run(self) -> None:
         while not self._stop.is_set():
             try:
@@ -120,8 +131,6 @@ class SerialReader:
         try:
             values = tuple(float(p) for p in parts[: self.channels])
         except ValueError:
-            # Boot-time chatter from the ESP32 ROM loader, or a half-line after
-            # connecting mid-stream. Both are expected; just skip.
             self.malformed += 1
             return
         with self._lock:
