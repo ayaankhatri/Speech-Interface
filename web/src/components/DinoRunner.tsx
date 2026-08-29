@@ -10,8 +10,17 @@ const DINO_H = 128;
 const DINO_W = Math.round((DINO_H * 109) / 119);
 const SPRITE_INK_BOTTOM = 0.6489;
 const FLOOR_OFFSET = Math.round(DINO_H * (1 - SPRITE_INK_BOTTOM)) - 1;
+const HIP_Y = 58.6;
+const LEG_SPLIT_X = 51;
+const SEAM_OVERLAP = 1.5;
 const STEP = 3;
 const TICK_MS = 45;
+
+const LAYER_CLIP = {
+  body: `inset(0px 0px ${DINO_H - HIP_Y - SEAM_OVERLAP}px 0px)`,
+  frontLeg: `inset(${HIP_Y}px ${DINO_W - LEG_SPLIT_X - 0.7}px 0px 0px)`,
+  rearLeg: `inset(${HIP_Y}px 0px 0px ${LEG_SPLIT_X - 0.7}px)`,
+} as const;
 
 export default function DinoRunner({ trackWidth, minX, jumpSignal }: Props) {
   const maxX = Math.max(minX, trackWidth - DINO_W);
@@ -53,6 +62,8 @@ export default function DinoRunner({ trackWidth, minX, jumpSignal }: Props) {
     };
   }, [jumpSignal]);
 
+  const walking = hovered && !jumping;
+
   return (
     <div
       className="absolute cursor-pointer"
@@ -62,16 +73,27 @@ export default function DinoRunner({ trackWidth, minX, jumpSignal }: Props) {
       title="hover to walk · new word to jump"
     >
       <div className={jumping ? "dino-jump" : undefined}>
-        <div className={hovered && !jumping ? "dino-walk" : undefined}>
-          <img
-            src="/assets/dino.svg"
-            alt="dino"
-            draggable={false}
-            className="select-none"
-            style={{ width: DINO_W, height: DINO_H, transform: `scaleX(${-dir})` }}
-          />
+        <div
+          className="relative select-none"
+          style={{ width: DINO_W, height: DINO_H, transform: `scaleX(${-dir})` }}
+        >
+          <DinoLayer clip={LAYER_CLIP.body} />
+          <DinoLayer clip={LAYER_CLIP.frontLeg} className={walking ? "dino-step-a" : undefined} />
+          <DinoLayer clip={LAYER_CLIP.rearLeg} className={walking ? "dino-step-b" : undefined} />
         </div>
       </div>
     </div>
+  );
+}
+
+function DinoLayer({ clip, className }: { clip: string; className?: string }) {
+  return (
+    <img
+      src="/assets/dino.svg"
+      alt=""
+      draggable={false}
+      className={`absolute left-0 top-0 select-none ${className ?? ""}`}
+      style={{ width: DINO_W, height: DINO_H, clipPath: clip }}
+    />
   );
 }
