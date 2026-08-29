@@ -18,27 +18,37 @@ export const TV = {
 // The dark CRT screen area — all interactive content lives inside this.
 export const SCREEN = { left: 53, top: 65, width: 888, height: 686 } as const;
 
-export const TITLE = { left: 316, top: 80, fontSize: 64 } as const;
+export const TITLE = { left: 53, top: 80, fontSize: 64 } as const;
 
-export const STATUS = { dot: { left: 95, top: 120 }, label: { left: 121, top: 116 } } as const;
+export const STATUS = { dot: { left: 97, top: 150 }, label: { left: 123, top: 146 } } as const;
 
+// Shared word typography for both the Detected and Probabilistic panels.
+export const BOX_TEXT = {
+  color: "#FFF",
+  fontSize: 60,
+  fontWeight: 400,
+  lineHeight: "normal",
+} as const;
+
+// Two equal panels, centred symmetrically across the screen width with an even
+// gap between them (screen spans x:53–941; ~44px margins, ~60px gutter).
 export const DETECTED = {
-  label: { left: 95, top: 186, fontSize: 24 },
-  box: { left: 95, top: 227, width: 362, height: 340 },
+  label: { left: 97, top: 196, fontSize: 24 },
+  box: { left: 97, top: 232, width: 370, height: 410 },
 } as const;
 
 export const PROBABILISTIC = {
-  label: { left: 544, top: 189, fontSize: 24 },
-  box: { left: 544, top: 223, width: 362, height: 340 },
+  label: { left: 527, top: 196, fontSize: 24 },
+  box: { left: 527, top: 232, width: 370, height: 410 },
 } as const;
 
 // Bottom control row. Buttons are evenly spaced across the screen width.
-export const CONTROLS = { top: 660, height: 62 } as const;
+export const CONTROLS = { top: 662, height: 62 } as const;
 
 // Decorative stickers, positioned to match their slots in the Figma frame
 // (image 21 / image 13 / image 15), including their playful rotations.
 export const STICKERS = {
   folder: { left: 660, top: 100, width: 66, height: 59, rotate: 7 },
   stars: { left: 382, top: 182, width: 126, height: 129, rotate: -30 },
-  camera: { left: 842, top: 521, width: 99, height: 91, rotate: 20 },
+  camera: { left: 842, top: 521, width: 99, height: 91, rotate: 110 },
 } as const;

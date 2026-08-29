@@ -43,18 +43,26 @@ export default function ControlButtons({
       className="absolute flex items-center justify-center gap-6"
       style={{ left: SCREEN.left, top: CONTROLS.top, width: SCREEN.width, height: CONTROLS.height }}
     >
-      {/* Power button, to the left of START */}
+      {/* Power button, to the left of START — sits on top of a star burst. */}
       <button
         type="button"
         onClick={onPower}
         aria-label="Power"
-        className="outline-none transition-transform duration-100 hover:scale-110 active:scale-95"
+        className="relative outline-none transition-transform duration-100 hover:scale-110 active:scale-95"
       >
+        {/* Star sits behind the power button. */}
+        <img
+          src="/assets/stars.svg"
+          alt=""
+          draggable={false}
+          className="pointer-events-none absolute left-1/2 top-1/2 -z-10 -translate-x-1/2 -translate-y-1/2 select-none"
+          style={{ width: 92, height: (92 * 108) / 105 }}
+        />
         <img
           src="/assets/btn-power.svg"
           alt="Power"
           draggable={false}
-          className="select-none"
+          className="relative select-none"
           style={{ height: BTN_H, width: (BTN_H * 59) / 56 }}
         />
       </button>

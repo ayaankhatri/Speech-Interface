@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { DETECTED } from "../layout";
+import { BOX_TEXT, DETECTED } from "../layout";
 import DinoRunner from "./DinoRunner";
 
 interface Props {
@@ -7,8 +7,8 @@ interface Props {
   jumpSignal: number;
 }
 
-const FONT_SIZE = 34;
-const LINE_HEIGHT = 46;
+const FONT_SIZE = BOX_TEXT.fontSize; // 60px, shared box typography
+const LINE_HEIGHT = 72; // "normal" line-height at 60px (~1.2)
 const MAX_ROWS = 3;
 const PAD = 16; // inner padding of the box
 const BORDER = 3;
@@ -54,10 +54,12 @@ export default function DetectedWords({ words, jumpSignal }: Props) {
       >
         <div
           ref={contentRef}
-          className="overflow-hidden font-handjet text-white"
+          className="overflow-hidden text-center font-handjet"
           style={{
             height: CONTENT_HEIGHT,
+            color: BOX_TEXT.color,
             fontSize: FONT_SIZE,
+            fontWeight: BOX_TEXT.fontWeight,
             lineHeight: `${LINE_HEIGHT}px`,
             overflowWrap: "anywhere",
             wordBreak: "break-word",

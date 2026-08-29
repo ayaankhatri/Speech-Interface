@@ -9,8 +9,8 @@ interface Props {
   jumpSignal: number;
 }
 
-// dino.svg is 109x119 — keep that aspect.
-const DINO_H = 50;
+// dino.svg is 109x119 — keep that aspect. (Doubled from 50 → 100.)
+const DINO_H = 100;
 const DINO_W = Math.round((DINO_H * 109) / 119);
 const STEP = 3; // px per tick
 const TICK_MS = 45;
@@ -75,8 +75,8 @@ export default function DinoRunner({ trackWidth, minX, jumpSignal }: Props) {
       <div className={jumping ? "dino-jump" : undefined}>
         <div
           className={hovered && !jumping ? "dino-walk" : undefined}
-          /* dino.svg faces left, so flip it to face the travel direction. */
-          style={{ transform: `scaleX(${-dir})` }}
+          /* Face the travel direction: right when walking left→right (dir=1). */
+          style={{ transform: `scaleX(${dir})` }}
         >
           <img
             src="/assets/dino.svg"

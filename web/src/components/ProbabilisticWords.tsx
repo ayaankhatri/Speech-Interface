@@ -1,4 +1,4 @@
-import { PROBABILISTIC } from "../layout";
+import { BOX_TEXT, PROBABILISTIC } from "../layout";
 
 interface Props {
   candidates: string[];
@@ -22,17 +22,23 @@ export default function ProbabilisticWords({ candidates }: Props) {
         className="box-border rounded-[10px] border-[3px] border-dashed border-[#fefefe]"
         style={{ width: PROBABILISTIC.box.width, height: PROBABILISTIC.box.height, padding: PAD }}
       >
-        <ol className="flex h-full flex-col justify-between font-handjet text-white">
+        <ol
+          className="flex h-full flex-col justify-between overflow-hidden font-handjet"
+          style={{ color: BOX_TEXT.color, fontWeight: BOX_TEXT.fontWeight, lineHeight: BOX_TEXT.lineHeight }}
+        >
           {Array.from({ length: 5 }).map((_, i) => {
             const word = candidates[i];
             return (
-              <li key={i} className="flex items-baseline gap-3 leading-none">
-                <span className="w-[28px] shrink-0 text-[30px] text-white/50">
+              <li key={i} className="flex items-baseline gap-3">
+                <span className="w-[34px] shrink-0 text-[36px] text-white/50">
                   {i + 1}.
                 </span>
                 <span
-                  className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[36px]"
-                  style={{ maxWidth: PROBABILISTIC.box.width - 2 * BORDER - 2 * PAD - 40 }}
+                  className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
+                  style={{
+                    fontSize: BOX_TEXT.fontSize,
+                    maxWidth: PROBABILISTIC.box.width - 2 * BORDER - 2 * PAD - 46,
+                  }}
                 >
                   {word ?? <span className="text-white/25">—</span>}
                 </span>
