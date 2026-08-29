@@ -21,6 +21,9 @@ WINDOW_SAMPLES = int(WINDOW_S * SAMPLE_HZ)
 from lib.wordData import CORE_WORDS, FULL_WORDS, WORDS, CARRIER  # noqa: F401
 
 # Feature Extraction
+SMOOTH_MS = 50  # rectified-signal moving-average width -> envelope
+SMOOTH_SAMPLES = max(1, int(SMOOTH_MS * SAMPLE_HZ / 1000))
+ACTIVE_FRAC = 0.5  # "active" = envelope above this fraction of the window peak
 N_SLICES = 3  # envelope shape over time
 N_FEATURES = 8 + N_SLICES * 2  # 8 whole-window + 2 per slice = 14
 
@@ -32,6 +35,8 @@ BASELINE_SAMPLES = int(BASELINE_S * SAMPLE_HZ)
 ONSET_K = 3.0  # trigger at baseline + K * std; start generous, tighten later
 ONSET_MIN_MS = 80  # must stay above threshold this long to count
 REFRACTORY_S = 1.5  # ignore new triggers while a capture is in flight
+PRE_ROLL_S = 0.2  # keep this much signal from before the trigger in the capture
+PRE_ROLL_SAMPLES = int(PRE_ROLL_S * SAMPLE_HZ)
 
 # Model
 N_ESTIMATORS = 300
