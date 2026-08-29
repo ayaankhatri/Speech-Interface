@@ -1,6 +1,3 @@
-// Vocabulary mirrored from the Python package (lib/wordData.py) so the demo
-// stream speaks the same words the sEMG classifier is trained on.
-
 export const CORE_WORDS = [
   "yes",
   "no",
@@ -25,9 +22,6 @@ export const EXTRA_WORDS = [
 ] as const;
 
 export const FULL_WORDS = [...CORE_WORDS, ...EXTRA_WORDS];
-
-// Phonetically-similar neighbours used to fake the classifier's top-K
-// probability list for the "Probabilistic Words" panel.
 const NEIGHBOURS: Record<string, string[]> = {
   hello: ["hallo", "halo", "help", "hell"],
   help: ["held", "helm", "kelp", "hemp"],
@@ -48,7 +42,6 @@ const NEIGHBOURS: Record<string, string[]> = {
   tired: ["tried", "fired", "tide", "wired"],
 };
 
-/** Build up to five ranked candidates for a detected word, best first. */
 export function probabilisticWordsFor(word: string): string[] {
   if (!word) return [];
   const extras = NEIGHBOURS[word.toLowerCase()] ?? [];
