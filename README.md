@@ -2,18 +2,18 @@
 
 A sEMG interface that reads words you only *mouth*, silently, and speaks
 them aloud. 
-One sensor under the chin → ESP32 → laptop classifier → offline TTS + terminal dashboard.
+Two sEMG sensors → ESP32 → laptop classifier → offline TTS + terminal dashboard.
 
 ## Layout
 
 ```
-firmware/silent_signal_stream/   ESP32 sketch — samples one ADC channel @500Hz, streams "millis,adc"
+firmware/silent_signal_stream/   ESP32 sketch — samples two ADC channels @500Hz, streams "adc1<TAB>adc2"
 silent_signal/                   Python package
   config.py       constants, vocabulary, carrier phrases, paths
   serial_reader.py background serial read -> ring buffer        [stub: phase 6]
   collect.py       prompted-recording CLI                       [stub: phase 3]
   dataset.py       load data/<word>/*.csv -> (X, y)
-  features.py      envelope-window feature vector (14 dims)
+  features.py      envelope-window feature vector (14 dims/channel, 28 total)
   train.py         Random Forest + confusion matrix -> models/model.joblib
   onset.py         live onset detection                         [stub: phase 6]
   live.py          real-time inference loop + dashboard          [stub: phase 6]
