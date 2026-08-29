@@ -28,8 +28,8 @@ def save_capture(word_dir: Path, samples) -> Path:
     path = word_dir / f"{next_index(word_dir):03d}.csv"
     with path.open("w", newline="") as fh:
         writer = csv.writer(fh)
-        writer.writerow(["sample", "adc"])
-        writer.writerows(enumerate(samples))
+        writer.writerow(["sample"] + [f"adc{c + 1}" for c in range(cfg.N_CHANNELS)])
+        writer.writerows([i, *row] for i, row in enumerate(samples))
     return path
 
 
@@ -95,12 +95,13 @@ def main(argv: list[str] | None = None) -> int:
             time.sleep(args.duration)
             window = reader.snapshot(samples_wanted)
 
-            if window.size < samples_wanted:
-                print(f"\r  dropped — got {window.size}/{samples_wanted} samples" + " " * 12)
+            if len(window) < samples_wanted:
+                print(f"\r  dropped — got {len(window)}/{samples_wanted} samples" + " " * 12)
                 continue
 
             path = save_capture(word_dir, window)
-            print(f"\r  saved {path.relative_to(cfg.ROOT)}  peak={window.max():.0f}" + " " * 8)
+            peaks = " ".join(f"{p:.0f}" for p in window.max(axis=0))
+            print(f"\r  saved {path.relative_to(cfg.ROOT)}  peaks={peaks}" + " " * 8)
             time.sleep(args.rest)
     except KeyboardInterrupt:
         print("\nstopped")

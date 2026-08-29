@@ -18,7 +18,7 @@ import numpy as np
 
 from . import config as cfg
 from .action import Speaker
-from .features import envelope, features
+from .features import combine, envelope, features
 from .onset import OnsetDetector
 from .serial_reader import SerialReader
 
@@ -79,15 +79,16 @@ def run(port: str, sink: Sink = print_sink, speak: bool = True, model_path=cfg.M
             time.sleep(0.05)
             buf = reader.snapshot()
             end_total = reader.total_samples
-            if buf.size == 0:
+            if len(buf) == 0:
                 continue
 
-            env = envelope(buf)
-            n_new = min(end_total - last_total, env.size)
+            # Onset watches one combined trace; the classifier still sees both.
+            mono = combine(envelope(buf))
+            n_new = min(end_total - last_total, len(mono))
             last_total = end_total
 
             if pending is None and n_new > 0:
-                trigger = detector.feed(env[env.size - n_new :])
+                trigger = detector.feed(mono[len(mono) - n_new :])
                 if trigger is not None:
                     pending = max(0, trigger - cfg.PRE_ROLL_SAMPLES - detector.min_samples)
 

@@ -1,9 +1,10 @@
 """dataset loader — data/<word>/*.csv to an (X, y) feature matrix
 
-CSV layout, one file per recorded rep, written by collect.py:
-    sample,adc
-    0,1873
-    1,1881
+CSV layout, one file per recorded rep, written by collect.py — one column per
+EMG channel, in the same order the firmware prints them:
+    sample,adc1,adc2
+    0,1873,1902
+    1,1881,1898
     ...
 """
 from __future__ import annotations
@@ -18,16 +19,20 @@ from .features import features_from_raw
 
 
 def read_capture(path: Path) -> np.ndarray:
-    values: list[float] = []
+    """One capture file -> (samples, channels). The header row fails the float
+    conversion and is skipped along with any truncated trailing line."""
+    rows: list[list[float]] = []
     with path.open(newline="") as fh:
         for row in csv.reader(fh):
-            if len(row) < 2:
+            if len(row) < 1 + cfg.N_CHANNELS:
                 continue
             try:
-                values.append(float(row[1]))
+                rows.append([float(v) for v in row[1 : 1 + cfg.N_CHANNELS]])
             except ValueError:
                 continue
-    return np.asarray(values, dtype=np.float64)
+    if not rows:
+        return np.empty((0, cfg.N_CHANNELS), dtype=np.float64)
+    return np.asarray(rows, dtype=np.float64)
 
 
 def load_dataset(
@@ -42,8 +47,8 @@ def load_dataset(
     for word in words:
         for path in sorted((data_dir / word).glob("*.csv")):
             raw = read_capture(path)
-            if raw.size < min_samples:
-                print(f"skip {path} — {raw.size} samples, need {min_samples}")
+            if len(raw) < min_samples:
+                print(f"skip {path} — {len(raw)} samples, need {min_samples}")
                 skipped += 1
                 continue
             rows.append(features_from_raw(raw))
