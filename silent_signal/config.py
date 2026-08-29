@@ -7,14 +7,14 @@ DATA_DIR = ROOT / "data"
 MODEL_DIR = ROOT / "models"
 MODEL_PATH = MODEL_DIR / "model.joblib"
 
-# Serial
+# Serial: connection with hardware
 BAUD = 115200
 SAMPLE_HZ = 500
 ADC_MAX = 4095  # ESP32 analogReadResolution(12)
 
 # Capture Time
 # One silently-mouthed word. Must match between collect.py and live.py:
-WINDOW_S = 1.2 #The size to record
+WINDOW_S = 1.4 #The size to record
 WINDOW_SAMPLES = int(WINDOW_S * SAMPLE_HZ)
 
 # Word Import
