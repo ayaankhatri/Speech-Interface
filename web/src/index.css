@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #0d0c0c;
+  font-family: "Handjet", monospace;
+  overflow: hidden;
+}
+
+/* Keep the pixel-art button/sticker art crisp when scaled. */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* --- Dino runner animations --- */
+@keyframes dinoJump {
+  0% {
+    transform: translateY(0);
+  }
+  35% {
+    transform: translateY(-38px);
+  }
+  55% {
+    transform: translateY(-38px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+.dino-jump {
+  animation: dinoJump 0.55s ease-out;
+}
+
+@keyframes dinoWalk {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+.dino-walk {
+  animation: dinoWalk 0.28s steps(2, end) infinite;
+}
