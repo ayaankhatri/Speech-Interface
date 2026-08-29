@@ -18,11 +18,15 @@ const COIN_COUNT = 6;
 const PAC_SIZE = 47;
 const GHOST_SIZE = 57;
 const COIN_SIZE = 27;
-const PAC_INSET = PAC_SIZE / 2;
-const GHOST_INSET = GHOST_SIZE / 2;
+const PAC_INSET = 0;
+const GHOST_INSET = 0;
 
 const TEXT = { left: 125, top: 287, width: 720, height: 260 };
-const TRACK = { left: 878, top: 247, width: 17, height: 340 };
+const BAR = { left: 866, top: 246, width: 29, height: 342 };
+const BAR_ARROW = Math.round(BAR.height * (15 / 185));
+const TRACK = { left: BAR.left, top: BAR.top + BAR_ARROW, width: BAR.width, height: BAR.height - 2 * BAR_ARROW };
+const THUMB_WIDTH = Math.round(BAR.width * 0.72);
+const THUMB_MIN = 44;
 
 type Edge = "top" | "right" | "bottom" | "left";
 
@@ -115,13 +119,13 @@ function BoxRunners({ chaseSignal, wordsCount }: { chaseSignal: number; wordsCou
       let gap = 0.5;
       if (phaseRef.current === "chase") {
         const prog = Math.min(1, (t - chaseStartRef.current) / CHASE_MS);
-        gap = 0.5 * (1 - prog);
+        gap = 0.5 * (1 + prog);
         if (prog >= 1) {
           phaseRef.current = "caught";
           setPacHidden(true);
         }
       } else if (phaseRef.current === "caught") {
-        gap = 0;
+        gap = 1;
       }
 
       const p = pathPoint(frac, PAC_INSET);
@@ -226,8 +230,8 @@ export default function HistoryScreen({ words, connected, onBack, onClear, onPow
       const rect = tr.getBoundingClientRect();
       const maxScroll = el.scrollHeight - el.clientHeight;
       if (maxScroll <= 0) return;
-      const thumb = Math.max(28, (TRACK.height * el.clientHeight) / el.scrollHeight);
-      const thumbPx = (thumb * rect.height) / TRACK.height;
+      const thumbLogical = Math.min(TRACK.height, Math.max(THUMB_MIN, (TRACK.height * el.clientHeight) / el.scrollHeight));
+      const thumbPx = (thumbLogical * rect.height) / TRACK.height;
       const range = rect.height - thumbPx;
       let f = range > 0 ? (e.clientY - rect.top - thumbPx / 2) / range : 0;
       f = Math.min(1, Math.max(0, f));
@@ -247,7 +251,9 @@ export default function HistoryScreen({ words, connected, onBack, onClear, onPow
 
   const maxScroll = metrics.scroll - metrics.client;
   const scrollable = maxScroll > 1;
-  const thumbHeight = scrollable ? Math.max(28, (TRACK.height * metrics.client) / metrics.scroll) : 0;
+  const thumbHeight = scrollable
+    ? Math.min(TRACK.height, Math.max(THUMB_MIN, (TRACK.height * metrics.client) / metrics.scroll))
+    : 0;
   const thumbTop = scrollable ? (metrics.top / maxScroll) * (TRACK.height - thumbHeight) : 0;
 
   return (
@@ -307,19 +313,28 @@ export default function HistoryScreen({ words, connected, onBack, onClear, onPow
       </div>
 
       {scrollable && (
-        <div ref={trackRef} className="absolute" style={{ left: TRACK.left, top: TRACK.top, width: TRACK.width, height: TRACK.height }}>
+        <>
           <img
-            src="/assets/scroll-bar.svg"
+            src="/assets/scroll-track.svg"
             alt=""
             draggable={false}
-            onPointerDown={(e) => {
-              e.preventDefault();
-              draggingRef.current = true;
-            }}
-            className="absolute left-0 cursor-grab select-none active:cursor-grabbing"
-            style={{ top: thumbTop, width: TRACK.width, height: thumbHeight }}
+            className="pointer-events-none absolute select-none"
+            style={{ left: BAR.left, top: BAR.top, width: BAR.width, height: BAR.height }}
           />
-        </div>
+          <div ref={trackRef} className="absolute" style={{ left: TRACK.left, top: TRACK.top, width: TRACK.width, height: TRACK.height }}>
+            <img
+              src="/assets/scroll-thumb.svg"
+              alt=""
+              draggable={false}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                draggingRef.current = true;
+              }}
+              className="absolute cursor-grab select-none active:cursor-grabbing"
+              style={{ left: (TRACK.width - THUMB_WIDTH) / 2, top: thumbTop, width: THUMB_WIDTH, height: thumbHeight }}
+            />
+          </div>
+        </>
       )}
 
       <BoxRunners chaseSignal={chaseSignal} wordsCount={words.length} />
