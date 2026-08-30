@@ -1,8 +1,9 @@
 // Animated analog snow, scanlines and vignette — the CRT "no signal" texture.
 import { useEffect, useRef } from "react";
 
-// Must match the .tv-off-collapse keyframes name in index.css.
+// Must match the keyframes names in index.css.
 export const COLLAPSE_ANIMATION = "tvOffCollapse";
+export const HANDOFF_ANIMATION = "tvOnHandoff";
 
 const NOISE_W = 320;
 const NOISE_H = 180;

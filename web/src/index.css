@@ -121,3 +121,29 @@ body {
   transform-origin: center;
   animation: tvOffCollapse 1.4s cubic-bezier(0.5, 0, 0.4, 1) forwards;
 }
+
+/* Turning on replays the same two keyframes backwards: a point blooms into a
+   line, the line opens into the picture, and the veil whites up as the tube
+   warms. The last moments cross-fade into the live screen underneath. */
+.tv-on-expand {
+  transform-origin: center;
+  animation: tvOffCollapse 1.4s cubic-bezier(0.5, 0, 0.4, 1) reverse forwards;
+}
+.tv-on-veil {
+  /* The veil occupies the first 0.5s of the turn-off, so reversed it belongs
+     in the final 0.5s. */
+  animation: tvVeilFade 0.5s cubic-bezier(0.33, 0, 0.15, 1) 0.9s reverse both;
+}
+
+@keyframes tvOnHandoff {
+  0%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.tv-on-handoff {
+  animation: tvOnHandoff 1.4s linear forwards;
+}

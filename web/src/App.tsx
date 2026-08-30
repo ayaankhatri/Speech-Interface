@@ -9,12 +9,15 @@ import TvOff from "./components/tvoff/TvOff";
 import MobileHome from "./components/mobile/MobileHome";
 import MobileHistory from "./components/mobile/MobileHistory";
 import MobileTvOff from "./components/mobile/MobileTvOff";
+import MobileTvOn from "./components/mobile/MobileTvOn";
 import MobileOff from "./components/mobile/MobileOff";
+import TvOn from "./components/tvoff/TvOn";
 
 export default function App() {
   const stream = useWordStream();
   const [showHistory, setShowHistory] = useState(false);
   const [turnOff, setTurnOff] = useState<"idle" | "status" | "screen">("idle");
+  const [turningOn, setTurningOn] = useState(false);
   const [draft, setDraft] = useState("");
 
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -57,6 +60,7 @@ export default function App() {
     // Whatever screen you powered off from stays up until the tube collapses;
     // it is cleared on the way back on, not here.
     if (stream.connected) stream.toggleConnection();
+    setTurningOn(false);
     setTurnOff("status");
     window.setTimeout(() => setTurnOff("screen"), 600);
   };
@@ -65,6 +69,7 @@ export default function App() {
     setShowHistory(false);
     if (!stream.connected) stream.toggleConnection();
     setTurnOff("idle");
+    setTurningOn(true);
   };
 
   const submitDraft = () => {
@@ -76,16 +81,21 @@ export default function App() {
   if (mobile) {
     if (turnOff === "screen") return <MobileTvOff onDone={() => setTurnOff("idle")} />;
     if (!stream.connected && turnOff === "idle") return <MobileOff onPower={powerOn} />;
-    return showHistory ? (
-      <MobileHistory
-        words={stream.words}
-        connected={stream.connected}
-        onBack={() => setShowHistory(false)}
-        onClear={stream.clear}
-        onPower={powerOff}
-      />
-    ) : (
-      <MobileHome stream={stream} onPower={powerOff} onHistory={() => setShowHistory(true)} />
+    return (
+      <div className="relative h-full w-full">
+        {showHistory ? (
+          <MobileHistory
+            words={stream.words}
+            connected={stream.connected}
+            onBack={() => setShowHistory(false)}
+            onClear={stream.clear}
+            onPower={powerOff}
+          />
+        ) : (
+          <MobileHome stream={stream} onPower={powerOff} onHistory={() => setShowHistory(true)} />
+        )}
+        {turningOn && <MobileTvOn onDone={() => setTurningOn(false)} />}
+      </div>
     );
   }
 
@@ -111,6 +121,8 @@ export default function App() {
           {!stream.connected && turnOff === "idle" && <ColorBar onPower={powerOn} />}
 
           {turnOff === "screen" && <TvOff onDone={() => setTurnOff("idle")} />}
+
+          {turningOn && <TvOn onDone={() => setTurningOn(false)} />}
         </div>
       </div>
 
