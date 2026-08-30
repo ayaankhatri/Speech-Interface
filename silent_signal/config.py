@@ -11,7 +11,7 @@ MODEL_PATH = MODEL_DIR / "model.joblib"
 BAUD = 115200
 SAMPLE_HZ = 500
 ADC_MAX = 4095
-N_CHANNELS = 2
+N_CHANNELS = 1
 MAINS_HZ = 50  # local mains frequency; 60 in US/JP -- drives the notch filter
 
 # Capture Time

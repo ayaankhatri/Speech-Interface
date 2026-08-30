@@ -24,8 +24,8 @@ void setup() {
   Serial.begin(SERIAL_BAUD);
   delay(200);
   analogReadResolution(ADC_BITS);
-  analogSetPinAttenuation(EMG_PIN_A, ADC_11db);
-  analogSetPinAttenuation(EMG_PIN_B, ADC_11db);
+  analogSetPinAttenuation(EMG_PIN_A, ADC_2_5db);
+  analogSetPinAttenuation(EMG_PIN_B, ADC_2_5db);
 #if PULLDOWN_ON_B
   pinMode(EMG_PIN_B, INPUT_PULLDOWN);
 #endif
@@ -41,7 +41,7 @@ void loop() {
   int emgA = analogRead(EMG_PIN_A);
   int emgB = analogRead(EMG_PIN_B);
 
-  Serial.print(emgA);
-  Serial.print('\t');
-  Serial.println(emgB);
+  Serial.println(emgA);
+  //Serial.print('\t');
+  //Serial.println(emgB);
 }
