@@ -1,5 +1,7 @@
+// History screen
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { SCREEN, STICKERS, TITLE } from "../layout";
+import { SCREEN, STICKERS, TITLE } from "../../layout";
+import ConnectionStatus from "../home/ConnectionStatus";
 
 interface Props {
   words: string[];
@@ -14,27 +16,18 @@ const BASE_PERIMETER = 2 * (BOX.width + BOX.height);
 const SPEED = 150;
 const CLOSED_MS = 200;
 const CHASE_MS = 1000;
+const RESET_MS = 500;
 const COIN_COUNT = 6;
 const PAC_SIZE = 47;
 const GHOST_SIZE = 57;
 const COIN_SIZE = 27;
-const PAC_INSET = 0;
-const GHOST_INSET = 0;
 
 const TEXT = { left: 125, top: 287, width: 720, height: 260 };
-const BAR = { left: 866, top: 246, width: 29, height: 342 };
-const BAR_ARROW = Math.round(BAR.height * (15 / 185));
-const TRACK = { left: BAR.left, top: BAR.top + BAR_ARROW, width: BAR.width, height: BAR.height - 2 * BAR_ARROW };
-const THUMB_WIDTH = Math.round(BAR.width * 0.72);
-const THUMB_MIN = 44;
 
 type Edge = "top" | "right" | "bottom" | "left";
 
-function pathPoint(frac: number, inset: number): { x: number; y: number; edge: Edge } {
-  const L = BOX.left + inset;
-  const T = BOX.top + inset;
-  const W = BOX.width - 2 * inset;
-  const H = BOX.height - 2 * inset;
+function pathPoint(frac: number): { x: number; y: number; edge: Edge } {
+  const { left: L, top: T, width: W, height: H } = BOX;
   const per = 2 * (W + H);
   let d = ((((frac % 1) + 1) % 1)) * per;
   if (d < W) return { x: L + d, y: T, edge: "top" };
@@ -63,21 +56,21 @@ function makeCoins() {
   return Array.from({ length: COIN_COUNT }, () => ({ id: coinSeq++, frac: Math.random() }));
 }
 
-function BoxRunners({ chaseSignal, wordsCount }: { chaseSignal: number; wordsCount: number }) {
+function BoxRunners({ chaseSignal }: { chaseSignal: number }) {
   const [coins, setCoins] = useState(makeCoins);
   const [pac, setPac] = useState<{ x: number; y: number; edge: Edge; closed: boolean }>(() => ({
-    ...pathPoint(0, PAC_INSET),
+    ...pathPoint(0),
     closed: false,
   }));
-  const [ghost, setGhost] = useState(() => pathPoint(0.5, GHOST_INSET));
+  const [ghost, setGhost] = useState(() => pathPoint(0.5));
   const [pacHidden, setPacHidden] = useState(false);
 
   const coinsRef = useRef(coins);
   coinsRef.current = coins;
   const phaseRef = useRef<"run" | "chase" | "caught">("run");
   const chaseStartRef = useRef(0);
+  const caughtAtRef = useRef(0);
   const closedUntilRef = useRef(0);
-  const prevWordsRef = useRef(wordsCount);
 
   useEffect(() => {
     if (chaseSignal > 0) {
@@ -85,14 +78,6 @@ function BoxRunners({ chaseSignal, wordsCount }: { chaseSignal: number; wordsCou
       chaseStartRef.current = performance.now();
     }
   }, [chaseSignal]);
-
-  useEffect(() => {
-    if (wordsCount > prevWordsRef.current && phaseRef.current !== "run") {
-      phaseRef.current = "run";
-      setPacHidden(false);
-    }
-    prevWordsRef.current = wordsCount;
-  }, [wordsCount]);
 
   useEffect(() => {
     let raf = 0;
@@ -122,15 +107,20 @@ function BoxRunners({ chaseSignal, wordsCount }: { chaseSignal: number; wordsCou
         gap = 0.5 * (1 + prog);
         if (prog >= 1) {
           phaseRef.current = "caught";
+          caughtAtRef.current = t;
           setPacHidden(true);
         }
       } else if (phaseRef.current === "caught") {
         gap = 1;
+        if (t - caughtAtRef.current > RESET_MS) {
+          phaseRef.current = "run";
+          setPacHidden(false);
+        }
       }
 
-      const p = pathPoint(frac, PAC_INSET);
+      const p = pathPoint(frac);
       setPac({ x: p.x, y: p.y, edge: p.edge, closed: t < closedUntilRef.current });
-      setGhost(pathPoint(frac + gap, GHOST_INSET));
+      setGhost(pathPoint(frac + gap));
 
       prevFrac = frac;
       raf = requestAnimationFrame(loop);
@@ -142,7 +132,7 @@ function BoxRunners({ chaseSignal, wordsCount }: { chaseSignal: number; wordsCou
   return (
     <>
       {coins.map((c) => {
-        const p = pathPoint(c.frac, PAC_INSET);
+        const p = pathPoint(c.frac);
         return (
           <img
             key={c.id}
@@ -176,7 +166,7 @@ function BoxRunners({ chaseSignal, wordsCount }: { chaseSignal: number; wordsCou
   );
 }
 
-export default function HistoryScreen({ words, connected, onBack, onClear, onPower }: Props) {
+export default function History({ words, connected, onBack, onClear, onPower }: Props) {
   const history = words.length ? words.join(" - ") + " - " : "";
 
   const titleRef = useRef<HTMLSpanElement>(null);
@@ -206,78 +196,18 @@ export default function HistoryScreen({ words, connected, onBack, onClear, onPow
     setChaseSignal((n) => n + 1);
   };
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const draggingRef = useRef(false);
-  const [metrics, setMetrics] = useState({ top: 0, scroll: 0, client: 0 });
-
-  const readMetrics = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setMetrics({ top: el.scrollTop, scroll: el.scrollHeight, client: el.clientHeight });
-  };
-
-  useLayoutEffect(() => {
-    readMetrics();
-  }, [history]);
-
-  useEffect(() => {
-    const move = (e: PointerEvent) => {
-      if (!draggingRef.current) return;
-      const el = scrollRef.current;
-      const tr = trackRef.current;
-      if (!el || !tr) return;
-      const rect = tr.getBoundingClientRect();
-      const maxScroll = el.scrollHeight - el.clientHeight;
-      if (maxScroll <= 0) return;
-      const thumbLogical = Math.min(TRACK.height, Math.max(THUMB_MIN, (TRACK.height * el.clientHeight) / el.scrollHeight));
-      const thumbPx = (thumbLogical * rect.height) / TRACK.height;
-      const range = rect.height - thumbPx;
-      let f = range > 0 ? (e.clientY - rect.top - thumbPx / 2) / range : 0;
-      f = Math.min(1, Math.max(0, f));
-      el.scrollTop = f * maxScroll;
-      readMetrics();
-    };
-    const up = () => {
-      draggingRef.current = false;
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    return () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-    };
-  }, []);
-
-  const maxScroll = metrics.scroll - metrics.client;
-  const scrollable = maxScroll > 1;
-  const thumbHeight = scrollable
-    ? Math.min(TRACK.height, Math.max(THUMB_MIN, (TRACK.height * metrics.client) / metrics.scroll))
-    : 0;
-  const thumbTop = scrollable ? (metrics.top / maxScroll) * (TRACK.height - thumbHeight) : 0;
-
   return (
     <div className="absolute inset-0 z-20 overflow-hidden bg-gradient-to-b from-[#191717] to-[#484645]">
       <img src="/assets/tv.svg" alt="" className="absolute inset-0 h-full w-full" />
 
-      <span
-        className="absolute whitespace-nowrap font-handjet leading-[normal] text-white"
-        style={{ left: 95, top: 116, fontSize: 20 }}
-      >
-        {connected ? "Connected" : "Disconnected"}
-      </span>
+      <ConnectionStatus connected={connected} onToggle={onPower} />
+
       <span
         className="absolute whitespace-nowrap font-handjet leading-[normal] text-white"
         style={{ left: 95, top: 196, fontSize: 24 }}
       >
         History
       </span>
-      <div
-        className={`absolute rounded-full border-2 shadow-[4px_12px_4px_0px_rgba(0,0,0,0.5)] ${
-          connected ? "border-[#3a6e2b] bg-[#59eb30]" : "border-status-red-edge bg-status-red"
-        }`}
-        style={{ left: 171, top: 118, width: 17, height: 17 }}
-      />
 
       <button
         type="button"
@@ -304,40 +234,13 @@ export default function HistoryScreen({ words, connected, onBack, onClear, onPow
       />
 
       <div
-        ref={scrollRef}
-        onScroll={readMetrics}
         className="absolute overflow-y-auto text-center font-handjet [scrollbar-width:none] [word-break:break-word] [&::-webkit-scrollbar]:hidden"
         style={{ left: TEXT.left, top: TEXT.top, width: TEXT.width, height: TEXT.height, color: "#FFF", fontSize: 54, fontWeight: 400, lineHeight: "normal" }}
       >
         {history}
       </div>
 
-      {scrollable && (
-        <>
-          <img
-            src="/assets/scroll-track.svg"
-            alt=""
-            draggable={false}
-            className="pointer-events-none absolute select-none"
-            style={{ left: BAR.left, top: BAR.top, width: BAR.width, height: BAR.height }}
-          />
-          <div ref={trackRef} className="absolute" style={{ left: TRACK.left, top: TRACK.top, width: TRACK.width, height: TRACK.height }}>
-            <img
-              src="/assets/scroll-thumb.svg"
-              alt=""
-              draggable={false}
-              onPointerDown={(e) => {
-                e.preventDefault();
-                draggingRef.current = true;
-              }}
-              className="absolute cursor-grab select-none active:cursor-grabbing"
-              style={{ left: (TRACK.width - THUMB_WIDTH) / 2, top: thumbTop, width: THUMB_WIDTH, height: thumbHeight }}
-            />
-          </div>
-        </>
-      )}
-
-      <BoxRunners chaseSignal={chaseSignal} wordsCount={words.length} />
+      <BoxRunners chaseSignal={chaseSignal} />
 
       <button
         type="button"

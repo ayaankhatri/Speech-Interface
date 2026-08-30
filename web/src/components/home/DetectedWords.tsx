@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { BOX_TEXT, PANEL_INNER_WIDTH } from "../layout";
+import { BOX_TEXT, PANEL_INNER_WIDTH } from "../../layout";
 import DinoRunner from "./DinoRunner";
 
 interface Props {

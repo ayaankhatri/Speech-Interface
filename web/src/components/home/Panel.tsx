@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { PANEL } from "../layout";
+import { PANEL } from "../../layout";
 
 interface Props {
   left: number;

@@ -67,3 +67,26 @@ body {
 .dino-step-b {
   animation: dinoStepB 0.28s linear infinite;
 }
+
+@keyframes tvOff {
+  0% {
+    transform: scaleY(1) scaleX(1);
+    opacity: 1;
+  }
+  45% {
+    transform: scaleY(0.03) scaleX(1);
+    opacity: 1;
+  }
+  70% {
+    transform: scaleY(0.03) scaleX(0.03);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(0.03) scaleX(0.001);
+    opacity: 0;
+  }
+}
+.tv-off-flash {
+  transform-origin: center;
+  animation: tvOff 0.9s ease-in forwards;
+}
