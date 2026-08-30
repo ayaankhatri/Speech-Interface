@@ -9,21 +9,15 @@ import TvOff from "./components/tvoff/TvOff";
 import MobileHome from "./components/mobile/MobileHome";
 import MobileHistory from "./components/mobile/MobileHistory";
 import MobileTvOff from "./components/mobile/MobileTvOff";
+import MobileTvOn from "./components/mobile/MobileTvOn";
 import MobileOff from "./components/mobile/MobileOff";
-
-type Power = "on" | "closing" | "collapsing" | "off";
-
-// How long the disconnected status stays readable before the tube collapses.
-const OFF_STATUS_MS = 600;
-// The set comes up disconnected, then links, so the change is visible.
-const CONNECT_DELAY_MS = 1400;
+import TvOn from "./components/tvoff/TvOn";
 
 export default function App() {
   const stream = useWordStream();
   const [showHistory, setShowHistory] = useState(false);
-  // "closing" holds the lit picture while the status flips to Disconnected;
-  // "collapsing" is the CRT discharge; "off" is the dead screen.
-  const [power, setPower] = useState<Power>("off");
+  const [turnOff, setTurnOff] = useState<"idle" | "status" | "screen">("idle");
+  const [turningOn, setTurningOn] = useState(false);
   const [draft, setDraft] = useState("");
   const powerTimer = useRef<number | null>(null);
 
@@ -75,23 +69,19 @@ export default function App() {
   // History stays up through the shutdown, so switching off from it closes the
   // set directly instead of flashing home first.
   const powerOff = () => {
-    clearPowerTimer();
-    stream.disconnect();
-    setPower("closing");
-    powerTimer.current = window.setTimeout(() => setPower("collapsing"), OFF_STATUS_MS);
-  };
-
-  // Runs once the tube has finished collapsing.
-  const finishPowerOff = () => {
-    setPower("off");
-    // The set always comes back up on home.
-    setShowHistory(false);
+    // Whatever screen you powered off from stays up until the tube collapses;
+    // it is cleared on the way back on, not here.
+    if (stream.connected) stream.toggleConnection();
+    setTurningOn(false);
+    setTurnOff("status");
+    window.setTimeout(() => setTurnOff("screen"), 600);
   };
 
   const powerOn = () => {
-    clearPowerTimer();
-    setPower("on");
-    powerTimer.current = window.setTimeout(() => stream.connect(), CONNECT_DELAY_MS);
+    setShowHistory(false);
+    if (!stream.connected) stream.toggleConnection();
+    setTurnOff("idle");
+    setTurningOn(true);
   };
 
   const submitDraft = () => {
@@ -101,18 +91,23 @@ export default function App() {
   };
 
   if (mobile) {
-    if (power === "collapsing") return <MobileTvOff onDone={finishPowerOff} />;
-    if (power === "off") return <MobileOff onPower={powerOn} />;
-    return showHistory ? (
-      <MobileHistory
-        words={stream.words}
-        connected={stream.connected}
-        onBack={() => setShowHistory(false)}
-        onClear={stream.clear}
-        onPower={powerOff}
-      />
-    ) : (
-      <MobileHome stream={stream} onPower={powerOff} onHistory={() => setShowHistory(true)} />
+    if (turnOff === "screen") return <MobileTvOff onDone={() => setTurnOff("idle")} />;
+    if (!stream.connected && turnOff === "idle") return <MobileOff onPower={powerOn} />;
+    return (
+      <div className="relative h-full w-full">
+        {showHistory ? (
+          <MobileHistory
+            words={stream.words}
+            connected={stream.connected}
+            onBack={() => setShowHistory(false)}
+            onClear={stream.clear}
+            onPower={powerOff}
+          />
+        ) : (
+          <MobileHome stream={stream} onPower={powerOff} onHistory={() => setShowHistory(true)} />
+        )}
+        {turningOn && <MobileTvOn onDone={() => setTurningOn(false)} />}
+      </div>
     );
   }
 
@@ -137,7 +132,9 @@ export default function App() {
 
           {power === "off" && <ColorBar onPower={powerOn} />}
 
-          {power === "collapsing" && <TvOff onDone={finishPowerOff} />}
+          {turnOff === "screen" && <TvOff onDone={() => setTurnOff("idle")} />}
+
+          {turningOn && <TvOn onDone={() => setTurningOn(false)} />}
         </div>
       </div>
 
