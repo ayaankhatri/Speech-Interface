@@ -8,6 +8,8 @@ import ColorBar from "./components/colorbar/ColorBar";
 import TvOff from "./components/tvoff/TvOff";
 import MobileHome from "./components/mobile/MobileHome";
 import MobileHistory from "./components/mobile/MobileHistory";
+import MobileTvOff from "./components/mobile/MobileTvOff";
+import MobileOff from "./components/mobile/MobileOff";
 
 type Power = "on" | "closing" | "collapsing" | "off";
 
@@ -79,6 +81,13 @@ export default function App() {
     powerTimer.current = window.setTimeout(() => setPower("collapsing"), OFF_STATUS_MS);
   };
 
+  // Runs once the tube has finished collapsing.
+  const finishPowerOff = () => {
+    setPower("off");
+    // The set always comes back up on home.
+    setShowHistory(false);
+  };
+
   const powerOn = () => {
     clearPowerTimer();
     setPower("on");
@@ -92,16 +101,18 @@ export default function App() {
   };
 
   if (mobile) {
+    if (power === "collapsing") return <MobileTvOff onDone={finishPowerOff} />;
+    if (power === "off") return <MobileOff onPower={powerOn} />;
     return showHistory ? (
       <MobileHistory
         words={stream.words}
         connected={stream.connected}
         onBack={() => setShowHistory(false)}
         onClear={stream.clear}
-        onPower={stream.toggleConnection}
+        onPower={powerOff}
       />
     ) : (
-      <MobileHome stream={stream} onPower={stream.toggleConnection} onHistory={() => setShowHistory(true)} />
+      <MobileHome stream={stream} onPower={powerOff} onHistory={() => setShowHistory(true)} />
     );
   }
 
@@ -126,15 +137,7 @@ export default function App() {
 
           {power === "off" && <ColorBar onPower={powerOn} />}
 
-          {power === "collapsing" && (
-            <TvOff
-              onDone={() => {
-                setPower("off");
-                // The set always comes back up on home.
-                setShowHistory(false);
-              }}
-            />
-          )}
+          {power === "collapsing" && <TvOff onDone={finishPowerOff} />}
         </div>
       </div>
 
