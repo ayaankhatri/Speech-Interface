@@ -18,12 +18,21 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [turnOff, setTurnOff] = useState<"idle" | "status" | "screen">("idle");
   const [turningOn, setTurningOn] = useState(false);
-  const [draft, setDraft] = useState("");
   const powerTimer = useRef<number | null>(null);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [mobile, setMobile] = useState(false);
+
+  // Single read of what the set is doing. Keyed off power intent, not
+  // `connected` — the set stays on whether or not a classifier is listening.
+  const power: "on" | "off" | "shutting-down" =
+    turnOff !== "idle" ? "shutting-down" : stream.powered ? "on" : "off";
+
+  // The feed opens as soon as you hit power, but the light holds at
+  // Disconnected until the tube has finished coming up, so you watch it change
+  // on a lit screen instead of finding it already green.
+  const online = power === "on" && !turningOn;
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -71,40 +80,43 @@ export default function App() {
   const powerOff = () => {
     // Whatever screen you powered off from stays up until the tube collapses;
     // it is cleared on the way back on, not here.
-    if (stream.connected) stream.toggleConnection();
+    stream.disconnect();
     setTurningOn(false);
     setTurnOff("status");
-    window.setTimeout(() => setTurnOff("screen"), 600);
+    clearPowerTimer();
+    powerTimer.current = window.setTimeout(() => setTurnOff("screen"), 600);
   };
 
   const powerOn = () => {
+    // Drops a shutdown still inside its 600ms status pause, so switching back on
+    // can't be followed by the tube collapsing anyway.
+    clearPowerTimer();
     setShowHistory(false);
-    if (!stream.connected) stream.toggleConnection();
+    stream.connect();
     setTurnOff("idle");
     setTurningOn(true);
   };
 
-  const submitDraft = () => {
-    if (!draft.trim()) return;
-    stream.addWord(draft);
-    setDraft("");
-  };
-
   if (mobile) {
     if (turnOff === "screen") return <MobileTvOff onDone={() => setTurnOff("idle")} />;
-    if (!stream.connected && turnOff === "idle") return <MobileOff onPower={powerOn} />;
+    if (power === "off") return <MobileOff onPower={powerOn} />;
     return (
       <div className="relative h-full w-full">
         {showHistory ? (
           <MobileHistory
             words={stream.words}
-            connected={stream.connected}
+            connected={online}
             onBack={() => setShowHistory(false)}
             onClear={stream.clear}
             onPower={powerOff}
           />
         ) : (
-          <MobileHome stream={stream} onPower={powerOff} onHistory={() => setShowHistory(true)} />
+          <MobileHome
+            stream={stream}
+            connected={online}
+            onPower={powerOff}
+            onHistory={() => setShowHistory(true)}
+          />
         )}
         {turningOn && <MobileTvOn onDone={() => setTurningOn(false)} />}
       </div>
@@ -112,18 +124,23 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-4 p-4">
+    <div className="flex h-full w-full flex-col items-center justify-center p-4">
       <div ref={wrapperRef} className="flex min-h-0 w-full flex-1 items-center justify-center">
         <div
           className="relative overflow-hidden bg-gradient-to-b from-[#191717] to-[#484645]"
           style={{ width: FRAME.width, height: FRAME.height, transform: `scale(${scale})`, transformOrigin: "center" }}
         >
-          <Home stream={stream} onPower={powerOff} onHistory={() => setShowHistory((v) => !v)} />
+          <Home
+            stream={stream}
+            connected={online}
+            onPower={powerOff}
+            onHistory={() => setShowHistory((v) => !v)}
+          />
 
           {showHistory && (
             <History
               words={stream.words}
-              connected={stream.connected}
+              connected={online}
               onBack={() => setShowHistory(false)}
               onClear={stream.clear}
               onPower={powerOff}
@@ -138,30 +155,6 @@ export default function App() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 font-handjet text-white/80">
-        <span className="text-sm uppercase tracking-widest text-white/40">say a word</span>
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submitDraft()}
-          placeholder="type + Enter…"
-          className="w-56 rounded-md border border-white/20 bg-black/40 px-3 py-1 text-white placeholder:text-white/30 focus:border-white/50 focus:outline-none"
-        />
-        <button
-          type="button"
-          onClick={submitDraft}
-          className="rounded-md border border-white/20 bg-white/10 px-3 py-1 hover:bg-white/20"
-        >
-          add
-        </button>
-
-        {stream.latestPrediction && (
-          <span className="text-sm text-white/50">
-            {stream.latestPrediction.word} p={stream.latestPrediction.confidence.toFixed(2)}
-          </span>
-        )}
-        {stream.error && <span className="text-sm text-status-red">{stream.error}</span>}
-      </div>
     </div>
   );
 }

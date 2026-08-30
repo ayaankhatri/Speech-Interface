@@ -11,11 +11,13 @@ import ControlButtons from "./ControlButtons";
 
 interface Props {
   stream: WordStream;
+  /** What the status light reports — held back until the tube has warmed up. */
+  connected: boolean;
   onPower: () => void;
   onHistory: () => void;
 }
 
-export default function Home({ stream, onPower, onHistory }: Props) {
+export default function Home({ stream, connected, onPower, onHistory }: Props) {
   const titleTextRef = useRef<HTMLSpanElement>(null);
   const [folderPos, setFolderPos] = useState<{ left: number; top: number }>({
     left: STICKERS.folder.left,
@@ -55,7 +57,7 @@ export default function Home({ stream, onPower, onHistory }: Props) {
 
       <Sticker src="/assets/folder.svg" spec={{ ...STICKERS.folder, ...folderPos }} />
 
-      <ConnectionStatus connected={stream.connected} onToggle={onPower} />
+      <ConnectionStatus connected={connected} onToggle={onPower} />
 
       <Panel left={PANEL_LEFT.detected} label="Detected Word">
         <DetectedWords words={stream.words} jumpSignal={stream.jumpSignal} />
