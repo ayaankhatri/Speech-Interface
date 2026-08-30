@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { CONTROLS, FRAME, PANEL_LEFT, SCREEN, STICKERS, TITLE } from "./layout";
+import { FRAME, PANEL_LEFT, SCREEN, STICKERS, TITLE } from "./layout";
 import { useWordStream } from "./hooks/useWordStream";
 import { probabilisticWordsFor } from "./vocab";
 import ConnectionStatus from "./components/ConnectionStatus";
@@ -7,6 +7,7 @@ import Panel from "./components/Panel";
 import DetectedWords from "./components/DetectedWords";
 import ProbabilisticWords from "./components/ProbabilisticWords";
 import ControlButtons from "./components/ControlButtons";
+import HistoryScreen from "./components/HistoryScreen";
 
 export default function App() {
   const stream = useWordStream();
@@ -115,7 +116,13 @@ export default function App() {
           />
 
           {showHistory && (
-            <HistoryOverlay words={stream.words} onClose={() => setShowHistory(false)} />
+            <HistoryScreen
+              words={stream.words}
+              connected={stream.connected}
+              onBack={() => setShowHistory(false)}
+              onClear={stream.clear}
+              onPower={stream.toggleConnection}
+            />
           )}
         </div>
       </div>
@@ -162,37 +169,5 @@ function Sticker({
         transform: `rotate(${spec.rotate}deg)`,
       }}
     />
-  );
-}
-
-function HistoryOverlay({ words, onClose }: { words: string[]; onClose: () => void }) {
-  return (
-    <div
-      className="absolute z-10 flex flex-col rounded-[10px] border-[3px] border-dashed border-white/70 bg-black/85 p-4 font-handjet text-white backdrop-blur-sm"
-      style={{
-        left: SCREEN.left + 40,
-        top: SCREEN.top + 40,
-        width: SCREEN.width - 80,
-        height: CONTROLS.top - SCREEN.top - 40,
-      }}
-    >
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-[28px]">History · {words.length} words</span>
-        <button type="button" onClick={onClose} className="text-[24px] text-white/60 hover:text-white">
-          ✕ close
-        </button>
-      </div>
-      <div className="flex flex-wrap content-start gap-x-3 gap-y-1 overflow-y-auto text-[24px] leading-tight">
-        {words.length === 0 ? (
-          <span className="text-white/40">Nothing said yet.</span>
-        ) : (
-          words.map((w, i) => (
-            <span key={i} className="text-white/85">
-              {w}
-            </span>
-          ))
-        )}
-      </div>
-    </div>
   );
 }
