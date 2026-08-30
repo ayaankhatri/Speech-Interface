@@ -9,6 +9,7 @@ venv/
 
 # Recorded sEMG data — person/session specific, not committed
 data/**
+data_old/**
 !data/.gitkeep
 
 # Generated captures — reproducible from synth.py, not committed
