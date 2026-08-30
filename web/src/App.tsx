@@ -8,6 +8,8 @@ import ColorBar from "./components/colorbar/ColorBar";
 import TvOff from "./components/tvoff/TvOff";
 import MobileHome from "./components/mobile/MobileHome";
 import MobileHistory from "./components/mobile/MobileHistory";
+import MobileTvOff from "./components/mobile/MobileTvOff";
+import MobileOff from "./components/mobile/MobileOff";
 
 export default function App() {
   const stream = useWordStream();
@@ -52,13 +54,15 @@ export default function App() {
   }, [stream]);
 
   const powerOff = () => {
-    setShowHistory(false);
+    // Whatever screen you powered off from stays up until the tube collapses;
+    // it is cleared on the way back on, not here.
     if (stream.connected) stream.toggleConnection();
     setTurnOff("status");
     window.setTimeout(() => setTurnOff("screen"), 600);
   };
 
   const powerOn = () => {
+    setShowHistory(false);
     if (!stream.connected) stream.toggleConnection();
     setTurnOff("idle");
   };
@@ -70,16 +74,18 @@ export default function App() {
   };
 
   if (mobile) {
+    if (turnOff === "screen") return <MobileTvOff onDone={() => setTurnOff("idle")} />;
+    if (!stream.connected && turnOff === "idle") return <MobileOff onPower={powerOn} />;
     return showHistory ? (
       <MobileHistory
         words={stream.words}
         connected={stream.connected}
         onBack={() => setShowHistory(false)}
         onClear={stream.clear}
-        onPower={stream.toggleConnection}
+        onPower={powerOff}
       />
     ) : (
-      <MobileHome stream={stream} onPower={stream.toggleConnection} onHistory={() => setShowHistory(true)} />
+      <MobileHome stream={stream} onPower={powerOff} onHistory={() => setShowHistory(true)} />
     );
   }
 
