@@ -42,6 +42,12 @@ const EVENTS_URL = import.meta.env.VITE_SIGNAL_URL ?? "http://127.0.0.1:8000/eve
 // Simulated detection cadence, matching WINDOW_S in the Python config.
 const STREAM_INTERVAL_MS = 1400;
 
+// The simulator below invents words when no classifier is answering. Kept off: a
+// demo that fabricates predictions is indistinguishable on screen from a working
+// interface, so an unplugged set would look like a solved one. Flip to true for
+// front-end work with no hardware or Python side running.
+const SIMULATE_WITHOUT_CLASSIFIER = false;
+
 interface SignalEvent {
   kind: "prediction" | "rejected" | "status";
   word?: string;
@@ -142,6 +148,7 @@ export function useWordStream(): WordStream {
   // Simulated detection loop, so Start still produces words with no hardware and
   // no classifier running. A live feed takes over the moment one connects.
   useEffect(() => {
+    if (!SIMULATE_WITHOUT_CLASSIFIER) return;
     if (!streaming || connected) return;
     const id = window.setInterval(() => addWord(randomWord()), STREAM_INTERVAL_MS);
     return () => window.clearInterval(id);
