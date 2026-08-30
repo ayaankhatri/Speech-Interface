@@ -4,6 +4,7 @@ interface Props {
   trackWidth: number;
   minX: number;
   jumpSignal: number;
+  interaction?: "hover" | "click";
 }
 
 const DINO_H = 128;
@@ -22,11 +23,11 @@ const LAYER_CLIP = {
   rearLeg: `inset(${HIP_Y}px 0px 0px ${LEG_SPLIT_X - 0.7}px)`,
 } as const;
 
-export default function DinoRunner({ trackWidth, minX, jumpSignal }: Props) {
+export default function DinoRunner({ trackWidth, minX, jumpSignal, interaction = "hover" }: Props) {
   const maxX = Math.max(minX, trackWidth - DINO_W);
   const [x, setX] = useState(minX);
   const [dir, setDir] = useState<1 | -1>(1);
-  const [hovered, setHovered] = useState(false);
+  const [active, setActive] = useState(false);
   const [jumping, setJumping] = useState(false);
   const jumpTimer = useRef<number | null>(null);
 
@@ -35,7 +36,7 @@ export default function DinoRunner({ trackWidth, minX, jumpSignal }: Props) {
   }, [minX, maxX]);
 
   useEffect(() => {
-    if (!hovered) return;
+    if (!active) return;
     const id = window.setInterval(() => {
       setX((prev) => {
         let next = prev + dir * STEP;
@@ -50,7 +51,7 @@ export default function DinoRunner({ trackWidth, minX, jumpSignal }: Props) {
       });
     }, TICK_MS);
     return () => window.clearInterval(id);
-  }, [hovered, dir, minX, maxX]);
+  }, [active, dir, minX, maxX]);
 
   useEffect(() => {
     if (jumpSignal === 0) return;
@@ -62,15 +63,19 @@ export default function DinoRunner({ trackWidth, minX, jumpSignal }: Props) {
     };
   }, [jumpSignal]);
 
-  const walking = hovered && !jumping;
+  const walking = active && !jumping;
+
+  const handlers =
+    interaction === "click"
+      ? { onClick: () => setActive((v) => !v) }
+      : { onMouseEnter: () => setActive(true), onMouseLeave: () => setActive(false) };
 
   return (
     <div
       className="absolute cursor-pointer"
       style={{ left: x, bottom: -FLOOR_OFFSET, width: DINO_W, height: DINO_H }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      title="hover to walk · new word to jump"
+      {...handlers}
+      title={interaction === "click" ? "click to walk · new word to jump" : "hover to walk · new word to jump"}
     >
       <div className={jumping ? "dino-jump" : undefined}>
         <div

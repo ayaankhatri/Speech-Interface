@@ -6,6 +6,7 @@ import Home from "./components/home/Home";
 import History from "./components/history/History";
 import ColorBar from "./components/colorbar/ColorBar";
 import TvOff from "./components/tvoff/TvOff";
+import MobileHome from "./components/mobile/MobileHome";
 
 export default function App() {
   const stream = useWordStream();
@@ -15,6 +16,15 @@ export default function App() {
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [mobile, setMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   useLayoutEffect(() => {
     const el = wrapperRef.current;
@@ -57,6 +67,10 @@ export default function App() {
     stream.addWord(draft);
     setDraft("");
   };
+
+  if (mobile) {
+    return <MobileHome stream={stream} onPower={stream.toggleConnection} onHistory={() => {}} />;
+  }
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 p-4">
