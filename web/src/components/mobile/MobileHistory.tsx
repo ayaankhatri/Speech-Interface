@@ -1,6 +1,7 @@
 // Mobile history screen
 import { useLayoutEffect, useRef, useState } from "react";
 import BoxRunners from "../history/BoxRunners";
+import { useFolderAnchor } from "../../hooks/useFolderAnchor";
 
 interface Props {
   words: string[];
@@ -21,9 +22,17 @@ const TEXT_SIZE = 40;
 const TEXT_LINE = 45;
 const TEXT_MAX_LINES = 4;
 
+const FOLDER = { width: 50, height: 43 };
+
+// The row of controls shares one horizontal centre line.
+const CONTROLS_CENTER_Y = 549;
+const POWER = { left: 47.9, width: 41, height: 39 };
+const BUTTON = { width: 86, height: 40 };
+
 export default function MobileHistory({ words, connected, onBack, onClear, onPower }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const folder = useFolderAnchor({ ...FOLDER, overlap: 11 });
 
   useLayoutEffect(() => {
     const el = wrapperRef.current;
@@ -59,7 +68,9 @@ export default function MobileHistory({ words, connected, onBack, onClear, onPow
         >
           <div className="relative" style={{ width: INNER.width, height: INNER.height }}>
             <div
-              className="absolute rounded-full border-2 border-[#3a6e2b] bg-[#59eb30] shadow-[4px_12px_4px_0px_rgba(0,0,0,0.5)]"
+              className={`absolute rounded-full border-2 shadow-[4px_12px_4px_0px_rgba(0,0,0,0.5)] transition-colors ${
+                connected ? "border-status-green-edge bg-status-green" : "border-status-red-edge bg-status-red"
+              }`}
               style={{ left: 8.5, top: 17, width: 17, height: 17 }}
             />
             <span
@@ -70,18 +81,27 @@ export default function MobileHistory({ words, connected, onBack, onClear, onPow
             </span>
 
             <span
+              ref={folder.titleRef}
               className="absolute whitespace-nowrap font-handjet leading-[normal] text-white"
               style={{ left: 37.5, top: 56, fontSize: 48 }}
             >
               Silent Signal
             </span>
-            <img
-              src="/assets/folder.svg"
-              alt=""
-              draggable={false}
-              className="pointer-events-none absolute select-none"
-              style={{ left: 287.5, top: 79, width: 50, height: 43, transform: "rotate(6.89deg)" }}
-            />
+            {folder.pos && (
+              <img
+                src="/assets/folder.svg"
+                alt=""
+                draggable={false}
+                className="pointer-events-none absolute select-none"
+                style={{
+                  left: folder.pos.left,
+                  top: folder.pos.top,
+                  width: folder.width,
+                  height: folder.height,
+                  transform: "rotate(6.89deg)",
+                }}
+              />
+            )}
 
             <span
               className="absolute whitespace-nowrap font-handjet leading-[normal] text-white"
@@ -112,20 +132,31 @@ export default function MobileHistory({ words, connected, onBack, onClear, onPow
 
             <BoxRunners box={BOX} chaseSignal={chaseSignal} speed={90} pacSize={26} ghostSize={31} coinSize={15} />
 
-            {/* Controls */}
+            {/* Controls — all centred on CONTROLS_CENTER_Y */}
             <img
               src="/assets/stars.svg"
               alt=""
               draggable={false}
               className="pointer-events-none absolute select-none"
-              style={{ left: 50.4, top: 471.7, width: 55, height: 61, transform: "rotate(-30deg)" }}
+              style={{
+                left: 50.4,
+                top: CONTROLS_CENTER_Y - 19.5 - 37.6,
+                width: 55,
+                height: 61,
+                transform: "rotate(-30deg)",
+              }}
             />
             <button
               type="button"
               onClick={onPower}
               aria-label="Power"
               className="absolute outline-none transition-transform duration-100 active:scale-95"
-              style={{ left: 47.9, top: 509.3, width: 41, height: 39 }}
+              style={{
+                left: POWER.left,
+                top: CONTROLS_CENTER_Y - POWER.height / 2,
+                width: POWER.width,
+                height: POWER.height,
+              }}
             >
               <img src="/assets/btn-power.svg" alt="Power" draggable={false} className="h-full w-full select-none" />
             </button>
@@ -134,7 +165,7 @@ export default function MobileHistory({ words, connected, onBack, onClear, onPow
               onClick={onBack}
               aria-label="Go back"
               className="absolute outline-none transition-transform duration-100 active:scale-95"
-              style={{ left: 107, top: 529, width: 86, height: 40 }}
+              style={{ left: 107, top: CONTROLS_CENTER_Y - BUTTON.height / 2, ...BUTTON }}
             >
               <img src="/assets/btn-back.svg" alt="Go back" draggable={false} className="h-full w-full select-none" />
             </button>
@@ -143,7 +174,7 @@ export default function MobileHistory({ words, connected, onBack, onClear, onPow
               onClick={handleClear}
               aria-label="Clear"
               className="absolute outline-none transition-transform duration-100 active:scale-95"
-              style={{ left: 217.5, top: 529, width: 86, height: 40 }}
+              style={{ left: 217.5, top: CONTROLS_CENTER_Y - BUTTON.height / 2, ...BUTTON }}
             >
               <img src="/assets/btn-clear.svg" alt="Clear" draggable={false} className="h-full w-full select-none" />
             </button>
