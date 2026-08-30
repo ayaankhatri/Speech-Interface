@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Recorded sEMG data — person/session specific, not committed
+data/**
+data_old/**
+!data/.gitkeep
+
+# Generated captures — reproducible from synth.py, not committed
+data_synth/
+
+# Trained model artifacts
+models/**
+!models/.gitkeep
+*.joblib
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Arduino build output
+firmware/**/build/
+
+# Personal scratch notes — not shared
+myWorkspace/
