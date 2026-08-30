@@ -1,4 +1,4 @@
-"""action layer — predicted word to carrier phrase + pyttsx3 speech
+"""action layer — predicted word to pyttsx3 speech
 
 pyttsx3's engine blocks while it speaks and is not safe to drive from two
 threads, so it lives on one worker thread behind a queue and the live loop just
@@ -8,13 +8,6 @@ from __future__ import annotations
 
 import queue
 import threading
-
-from . import config as cfg
-
-
-def phrase_for(word: str) -> str:
-    return cfg.CARRIER.get(word, word)
-
 
 class Speaker:
     def __init__(self, enabled: bool = True) -> None:
@@ -30,11 +23,9 @@ class Speaker:
         self._thread.start()
         return self
 
-    def say(self, word: str) -> str:
-        text = phrase_for(word)
+    def say(self, word: str) -> None:
         if self.enabled:
-            self._queue.put(text)
-        return text
+            self._queue.put(word)
 
     def stop(self) -> None:
         if self._thread is not None:

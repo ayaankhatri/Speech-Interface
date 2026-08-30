@@ -11,6 +11,9 @@ venv/
 data/**
 !data/.gitkeep
 
+# Generated captures — reproducible from synth.py, not committed
+data_synth/
+
 # Trained model artifacts
 models/**
 !models/.gitkeep
