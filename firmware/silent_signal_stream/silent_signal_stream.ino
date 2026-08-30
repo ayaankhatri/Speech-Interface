@@ -44,4 +44,5 @@ void loop() {
   Serial.print(emgA);
   Serial.print('\t');
   Serial.println(emgB);
+  delay(100);
 }
