@@ -38,7 +38,7 @@ export default function MobileHome({ stream, connected, onPower, onHistory }: Pr
       <span
         ref={folder.titleRef}
         className="absolute whitespace-nowrap font-handjet leading-[normal] text-white"
-        style={{ left: 37.5, top: 56, fontSize: 48 }}
+        style={{ left: 65.5, top: 56, fontSize: 48 }}
       >
         Silent Signal
       </span>
@@ -139,7 +139,7 @@ export default function MobileHome({ stream, connected, onPower, onHistory }: Pr
         draggable={false}
         className="pointer-events-none absolute select-none"
         style={{
-          left: 256.5,
+          left: 270.5,
           top: PROB_BOX.top + PROB_BOX.height - CAMERA.height / 2,
           width: CAMERA.width,
           height: CAMERA.height,
@@ -166,7 +166,7 @@ export default function MobileHome({ stream, connected, onPower, onHistory }: Pr
         onClick={onPower}
         aria-label="Power"
         className="absolute outline-none transition-transform duration-100 active:scale-95"
-        style={{ left: 56.5, top: 893, width: 33, height: 31 }}
+        style={{ left: 56.5, top: 910.5, width: 33, height: 31 }}
       >
         <img
           src="/assets/btn-power.svg"
