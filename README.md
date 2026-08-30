@@ -42,3 +42,16 @@ python -m silent_signal.collect --word water --reps 30 --duration 1.2   # per wo
 python -m silent_signal.train                                           # review confusion matrix
 python -m silent_signal.live --port /dev/tty.usbserial-XXXX             # demo
 ```
+
+Generated captures, while the hardware is still on the bench or when 30 real
+reps per word is too thin:
+
+```bash
+python -m silent_signal.synth --reps 40                 # invent data_synth/
+python -m silent_signal.synth --from data --reps 5      # jitter real captures
+python -m silent_signal.train --data-dir data_synth
+```
+
+Synthetic words are separable by construction, so that confusion matrix scores
+the generator, not the interface. Keep the two sets apart — `synth.py` refuses
+to write into `data/`.
