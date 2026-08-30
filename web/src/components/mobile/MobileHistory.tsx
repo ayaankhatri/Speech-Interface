@@ -50,7 +50,7 @@ export default function MobileHistory({
       <span
         ref={folder.titleRef}
         className="absolute whitespace-nowrap font-handjet leading-[normal] text-white"
-        style={{ left: 37.5, top: 56, fontSize: 48 }}
+        style={{ left: 65.5, top: 56, fontSize: 48 }}
       >
         Silent Signal
       </span>

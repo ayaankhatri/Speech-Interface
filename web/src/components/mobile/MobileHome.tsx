@@ -8,6 +8,8 @@ import MobileStatus from "./MobileStatus";
 
 interface Props {
   stream: WordStream;
+  /** What the status light reports — held back until the tube has warmed up. */
+  connected: boolean;
   onPower: () => void;
   onHistory: () => void;
 }
@@ -24,19 +26,19 @@ const DETECTED_LINE = 58;
 const FOLDER = { width: 50, height: 43 };
 const CAMERA = { width: 81, height: 67 };
 
-export default function MobileHome({ stream, onPower, onHistory }: Props) {
+export default function MobileHome({ stream, connected, onPower, onHistory }: Props) {
   // The title span is itself absolutely positioned, so its own offsets are the origin.
   const folder = useFolderAnchor({ ...FOLDER, overlap: 11 });
   const candidates = probabilisticWordsFor(stream.latest);
 
   return (
     <MobileFrame scrollable contentHeight={CONTENT_HEIGHT}>
-      <MobileStatus connected={stream.connected} />
+      <MobileStatus connected={connected} />
 
       <span
         ref={folder.titleRef}
         className="absolute whitespace-nowrap font-handjet leading-[normal] text-white"
-        style={{ left: 37.5, top: 56, fontSize: 48 }}
+        style={{ left: 65.5, top: 56, fontSize: 48 }}
       >
         Silent Signal
       </span>
@@ -137,7 +139,7 @@ export default function MobileHome({ stream, onPower, onHistory }: Props) {
         draggable={false}
         className="pointer-events-none absolute select-none"
         style={{
-          left: 256.5,
+          left: 270.5,
           top: PROB_BOX.top + PROB_BOX.height - CAMERA.height / 2,
           width: CAMERA.width,
           height: CAMERA.height,
@@ -164,7 +166,7 @@ export default function MobileHome({ stream, onPower, onHistory }: Props) {
         onClick={onPower}
         aria-label="Power"
         className="absolute outline-none transition-transform duration-100 active:scale-95"
-        style={{ left: 56.5, top: 893, width: 33, height: 31 }}
+        style={{ left: 56.5, top: 910.5, width: 33, height: 31 }}
       >
         <img
           src="/assets/btn-power.svg"

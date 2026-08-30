@@ -1,5 +1,6 @@
 // Word stream — server-sent events from the Python classifier (silent_signal.server)
 import { useCallback, useEffect, useRef, useState } from "react";
+import { randomWord } from "../vocab";
 
 export interface Prediction {
   word: string;
@@ -12,6 +13,17 @@ export interface WordStream {
   latest: string;
   latestPrediction: Prediction | null;
   jumpSignal: number;
+  /**
+   * Power intent: the set is switched on and has a word source, whether that is
+   * a live classifier or the built-in simulator. This is what the status light
+   * reports, so switching on reads "Connected".
+   */
+  powered: boolean;
+  /**
+   * Whether a classifier is actually answering on the wire. Drives the error
+   * text and decides if the simulator should stand in — not the status light,
+   * which would otherwise read "Disconnected" on a set that is plainly running.
+   */
   connected: boolean;
   streaming: boolean;
   error: string;
@@ -26,6 +38,9 @@ export interface WordStream {
 
 // Where the Python side publishes. Override with VITE_SIGNAL_URL to point at another host.
 const EVENTS_URL = import.meta.env.VITE_SIGNAL_URL ?? "http://127.0.0.1:8000/events";
+
+// Simulated detection cadence, matching WINDOW_S in the Python config.
+const STREAM_INTERVAL_MS = 1400;
 
 interface SignalEvent {
   kind: "prediction" | "rejected" | "status";
@@ -103,7 +118,7 @@ export function useWordStream(): WordStream {
     };
     es.onerror = () => {
       setConnected(false);
-      setError(`no classifier at ${EVENTS_URL} — run: python -m silent_signal.server --replay data_synth`);
+      setError(`no classifier at ${EVENTS_URL}`);
     };
     es.onmessage = (e) => {
       const event: SignalEvent = JSON.parse(e.data);
@@ -124,11 +139,20 @@ export function useWordStream(): WordStream {
     };
   }, [open, addWord]);
 
+  // Simulated detection loop, so Start still produces words with no hardware and
+  // no classifier running. A live feed takes over the moment one connects.
+  useEffect(() => {
+    if (!streaming || connected) return;
+    const id = window.setInterval(() => addWord(randomWord()), STREAM_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [streaming, connected, addWord]);
+
   return {
     words,
     latest: words.length ? words[words.length - 1] : "",
     latestPrediction,
     jumpSignal,
+    powered: open,
     connected,
     streaming,
     error,
