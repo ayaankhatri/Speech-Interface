@@ -1,4 +1,4 @@
-"""constants — vocab, carrier phrases, tunables, paths"""
+"""constants — vocab, tunables, paths"""
 from pathlib import Path
 
 # Paths
@@ -24,7 +24,7 @@ CLASSIFY_SAMPLES = int(CLASSIFY_S * SAMPLE_HZ)
 ALIGN_FRAC = 0.2
 
 # Word Import
-from lib.wordData import CORE_WORDS, FULL_WORDS, WORDS, CARRIER  # noqa: F401
+from lib.wordData import CORE_WORDS, FULL_WORDS, WORDS  # noqa: F401
 
 # Feature Extraction
 SMOOTH_MS = 50

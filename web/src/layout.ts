@@ -37,7 +37,10 @@ export const PANEL_INNER_WIDTH = PANEL.width - 2 * PANEL.border - 2 * PANEL.padd
 
 export const PANEL_BOTTOM = PANEL.top + PANEL.height;
 
-export const CONTROLS = { top: 662, height: 62 } as const;
+export const CONTROLS = { top: 662, height: 62, gap: 24, button: { width: 112, height: 52 } } as const;
+
+// Time the connection indicator lingers on its old state while the TV animates.
+export const POWER_STATUS_DELAY_MS = 600;
 
 // The tube's optical centre, which the CRT collapse converges on.
 export const SCREEN_CENTER = {

@@ -7,25 +7,18 @@ parsed here. Reading it inline would stall whatever loop owns the foreground, so
 a daemon thread drains the port into a fixed-size ring and callers take
 snapshots of it.
 
-Snapshots are always 2-D, shape (samples, channels), even for one channel.
-
-`total_samples` counts every sample ever accepted, including ones already
-pushed out of the ring, so it is an absolute position in the stream rather than
-an index into the buffer. Callers that need both must use `read`, which takes
-them under one lock: fetching the buffer and the counter separately lets the
-reader thread append in between, and every index derived from the pair is then
-off by however many samples landed in the gap.
+The buffer itself is a SampleRing, shared with the replay reader so both
+sources hand the live loop the same snapshot contract.
 """
 from __future__ import annotations
 
 import re
 import threading
-from collections import deque
 
-import numpy as np
 import serial
 
 from . import config as cfg
+from .ring import SampleRing
 
 _SPLIT = re.compile(r"[,\s]+")
 
@@ -43,14 +36,20 @@ class SerialReader:
         self.baud = baud
         self.channels = channels
         self.reconnect_s = reconnect_s
-        self._ring: deque[tuple[float, ...]] = deque(maxlen=ring_samples)
-        self._lock = threading.Lock()
+        self._ring = SampleRing(ring_samples, channels)
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self.connected = False
         self.last_error: str | None = None
-        self.total_samples = 0
         self.malformed = 0
+
+    @property
+    def source(self) -> str:
+        return self.port
+
+    @property
+    def total_samples(self) -> int:
+        return self._ring.total
 
     # Lifecycle
     def start(self) -> "SerialReader":
@@ -74,32 +73,16 @@ class SerialReader:
 
     # Buffer access
     def read(self, n: int | None = None) -> tuple[np.ndarray, int]:
-        with self._lock:
-            rows = list(self._ring)
-            total = self.total_samples
-        if not rows:
-            return np.empty((0, self.channels), dtype=np.float64), total
-        buf = np.asarray(rows, dtype=np.float64)
-        return (buf if n is None else buf[-n:]), total
+        return self._ring.read(n)
 
     def snapshot(self, n: int | None = None) -> np.ndarray:
         return self.read(n)[0]
 
     def clear(self) -> None:
-        with self._lock:
-            self._ring.clear()
+        self._ring.clear()
 
     def wait_for_samples(self, n: int, timeout_s: float = 5.0) -> bool:
-        deadline = threading.Event()
-        waited = 0.0
-        step = 0.02
-        while waited < timeout_s:
-            with self._lock:
-                if len(self._ring) >= n:
-                    return True
-            deadline.wait(step)
-            waited += step
-        return False
+        return self._ring.wait_for(n, timeout_s)
 
     # Stream
     def _run(self) -> None:
@@ -133,6 +116,4 @@ class SerialReader:
         except ValueError:
             self.malformed += 1
             return
-        with self._lock:
-            self._ring.append(values)
-            self.total_samples += 1
+        self._ring.append(values)

@@ -19,13 +19,22 @@ from . import config as cfg
 from .serial_reader import SerialReader
 
 
-def next_index(word_dir: Path) -> int:
-    existing = [int(p.stem) for p in word_dir.glob("*.csv") if p.stem.isdigit()]
+def next_index(word_dir: Path, prefix: str = "") -> int:
+    """Next free number among files named <prefix>NNN.csv.
+
+    Numbered per prefix so generated captures (synth.py writes "syn"/"aug") get
+    their own run of indices and can never overwrite, or renumber, a recording.
+    """
+    existing = [
+        int(p.stem[len(prefix) :])
+        for p in word_dir.glob(f"{prefix}*.csv")
+        if p.stem[: len(prefix)] == prefix and p.stem[len(prefix) :].isdigit()
+    ]
     return max(existing, default=0) + 1
 
 
-def save_capture(word_dir: Path, samples) -> Path:
-    path = word_dir / f"{next_index(word_dir):03d}.csv"
+def save_capture(word_dir: Path, samples, prefix: str = "") -> Path:
+    path = word_dir / f"{prefix}{next_index(word_dir, prefix):03d}.csv"
     with path.open("w", newline="") as fh:
         writer = csv.writer(fh)
         writer.writerow(["sample"] + [f"adc{c + 1}" for c in range(cfg.N_CHANNELS)])

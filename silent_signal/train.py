@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 import joblib
 import numpy as np
@@ -42,9 +43,15 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--folds", type=int, default=cfg.CV_FOLDS)
     ap.add_argument("--trees", type=int, default=cfg.N_ESTIMATORS)
+    ap.add_argument(
+        "--data-dir",
+        type=Path,
+        default=cfg.DATA_DIR,
+        help="captures to train on (default data/; synth.py writes data_synth/)",
+    )
     args = ap.parse_args(argv)
 
-    X, y = load_dataset()
+    X, y = load_dataset(args.data_dir)
     labels = sorted(set(y))
     counts = {w: int((y == w).sum()) for w in labels}
     print("captures per word:", counts)

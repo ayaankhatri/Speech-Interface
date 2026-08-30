@@ -1,15 +1,21 @@
-// esp32 program — sample the EMG ADC channel @500Hz, stream one reading per line
+// esp32 program — sample two EMG ADC channels @500Hz, stream "adc1<TAB>adc2" over USB serial
 //
-// Single channel for now: GPIO34 is physically unconnected, and reading two ADC1
-// pins per loop makes the core reconfigure the ADC on every analogRead, which
-// throttles the loop to ~10Hz. One pin sustains a verified 500Hz.
-// To go back to two channels, re-add EMG_PIN_A and re-measure the rate first.
+// Plain tab-separated integers, one sample pair per line: readable in the Serial
+// Monitor and plotted as two traces by the Serial Plotter. Baud 115200.
 
-const int EMG_PIN = 32;            // sensor SIG, via the 10k/3.3k divider
+// ---------------------------------------------------------------- configuration
+// ADC1 pins only (GPIO32-39); ADC2 is unusable while WiFi is active.
+const int EMG_PIN_A = 34;   // EMG sensor 1 signal out (input-only, no internal pulls)
+const int EMG_PIN_B = 32;   // EMG sensor 2 signal out (supports internal pull-down)
 
 const long SERIAL_BAUD    = 115200;
-const int  ADC_BITS       = 12;    // 0..4095
+const int  ADC_BITS       = 12;    // 12 bits -> 0..4095
 const int  SAMPLE_RATE_HZ = 500;   // matches config.py SAMPLE_HZ
+
+// Diagnostic: with the pull-down on, an UNDRIVEN GPIO32 reads a flat ~0 instead of
+// floating rail-to-rail. A real sensor output (low impedance) overrides it easily,
+// so this stays safe to leave enabled while recording.
+#define PULLDOWN_ON_B 1
 
 const unsigned long SAMPLE_INTERVAL_US = 1000000UL / SAMPLE_RATE_HZ;
 unsigned long nextSampleUs = 0;
@@ -18,6 +24,11 @@ void setup() {
   Serial.begin(SERIAL_BAUD);
   delay(200);
   analogReadResolution(ADC_BITS);
+  analogSetPinAttenuation(EMG_PIN_A, ADC_11db);
+  analogSetPinAttenuation(EMG_PIN_B, ADC_11db);
+#if PULLDOWN_ON_B
+  pinMode(EMG_PIN_B, INPUT_PULLDOWN);
+#endif
   nextSampleUs = micros();
 }
 
@@ -27,5 +38,10 @@ void loop() {
   }
   nextSampleUs += SAMPLE_INTERVAL_US;
 
-  Serial.println(analogRead(EMG_PIN));
+  int emgA = analogRead(EMG_PIN_A);
+  int emgB = analogRead(EMG_PIN_B);
+
+  Serial.print(emgA);
+  Serial.print('\t');
+  Serial.println(emgB);
 }
