@@ -2,6 +2,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { SCREEN, STICKERS, TITLE } from "../../layout";
 import ConnectionStatus from "../home/ConnectionStatus";
+import PowerButton from "../common/PowerButton";
 import BoxRunners from "./BoxRunners";
 
 interface Props {
@@ -15,6 +16,10 @@ interface Props {
 const BOX = { left: 95, top: 227, width: 810, height: 380 };
 
 const TEXT = { left: 125, top: 287, width: 720, height: 260 };
+
+// History centres its own three-button row, so power sits here rather than at
+// the shared home position.
+const POWER_SPEC = { left: 279, top: 667, width: 58.6165, height: 55.5169 };
 
 export default function History({ words, connected, onBack, onClear, onPower }: Props) {
   const history = words.length ? words.join(" - ") + " - " : "";
@@ -59,24 +64,7 @@ export default function History({ words, connected, onBack, onClear, onPower }: 
         History
       </span>
 
-      <button
-        type="button"
-        onClick={onPower}
-        aria-label="Power"
-        className="absolute outline-none transition-transform duration-100 hover:scale-110 active:scale-95"
-        style={{ left: 279, top: 667, width: 58.6165, height: 55.5169 }}
-      >
-        <span className="relative block h-full w-full">
-          <img
-            src="/assets/stars.svg"
-            alt=""
-            draggable={false}
-            className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none"
-            style={{ width: 88, height: (88 * 108) / 105 }}
-          />
-          <img src="/assets/btn-power.svg" alt="Power" draggable={false} className="absolute inset-0 h-full w-full select-none" />
-        </span>
-      </button>
+      <PowerButton onClick={onPower} spec={POWER_SPEC} />
 
       <div
         className="absolute rounded-[10px] border-[3px] border-dashed border-[#fefefe]"

@@ -9,11 +9,21 @@ import TvOff from "./components/tvoff/TvOff";
 import MobileHome from "./components/mobile/MobileHome";
 import MobileHistory from "./components/mobile/MobileHistory";
 
+type Power = "on" | "closing" | "collapsing" | "off";
+
+// How long the disconnected status stays readable before the tube collapses.
+const OFF_STATUS_MS = 600;
+// The set comes up disconnected, then links, so the change is visible.
+const CONNECT_DELAY_MS = 1400;
+
 export default function App() {
   const stream = useWordStream();
   const [showHistory, setShowHistory] = useState(false);
-  const [turnOff, setTurnOff] = useState<"idle" | "status" | "screen">("idle");
+  // "closing" holds the lit picture while the status flips to Disconnected;
+  // "collapsing" is the CRT discharge; "off" is the dead screen.
+  const [power, setPower] = useState<Power>("off");
   const [draft, setDraft] = useState("");
+  const powerTimer = useRef<number | null>(null);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -44,23 +54,35 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "Space" && document.activeElement?.tagName !== "INPUT") {
         e.preventDefault();
+        if (power !== "on") return;
         stream.streaming ? stream.stopStream() : stream.startStream();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [stream]);
+  }, [stream, power]);
 
+  const clearPowerTimer = () => {
+    if (powerTimer.current !== null) {
+      window.clearTimeout(powerTimer.current);
+      powerTimer.current = null;
+    }
+  };
+  useEffect(() => clearPowerTimer, []);
+
+  // History stays up through the shutdown, so switching off from it closes the
+  // set directly instead of flashing home first.
   const powerOff = () => {
-    setShowHistory(false);
-    if (stream.connected) stream.toggleConnection();
-    setTurnOff("status");
-    window.setTimeout(() => setTurnOff("screen"), 600);
+    clearPowerTimer();
+    stream.disconnect();
+    setPower("closing");
+    powerTimer.current = window.setTimeout(() => setPower("collapsing"), OFF_STATUS_MS);
   };
 
   const powerOn = () => {
-    if (!stream.connected) stream.toggleConnection();
-    setTurnOff("idle");
+    clearPowerTimer();
+    setPower("on");
+    powerTimer.current = window.setTimeout(() => stream.connect(), CONNECT_DELAY_MS);
   };
 
   const submitDraft = () => {
@@ -102,9 +124,17 @@ export default function App() {
             />
           )}
 
-          {!stream.connected && turnOff === "idle" && <ColorBar onPower={powerOn} />}
+          {power === "off" && <ColorBar onPower={powerOn} />}
 
-          {turnOff === "screen" && <TvOff onDone={() => setTurnOff("idle")} />}
+          {power === "collapsing" && (
+            <TvOff
+              onDone={() => {
+                setPower("off");
+                // The set always comes back up on home.
+                setShowHistory(false);
+              }}
+            />
+          )}
         </div>
       </div>
 

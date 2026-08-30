@@ -1,6 +1,7 @@
-// Color-bar / no-signal screen
-import { useLayoutEffect, useRef, useState } from "react";
-import { SCREEN, TITLE } from "../../layout";
+// Colour-bar / no-signal screen
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { FRAME, SCREEN, TITLE } from "../../layout";
+import PowerButton from "../common/PowerButton";
 
 interface Props {
   onPower: () => void;
@@ -11,13 +12,66 @@ const SCREEN_PATH =
 
 // Keep the title clear of the tube's rounded corners.
 const BOUNDS_INSET = 28;
-const SPEED = 90; // px/s along each axis
 
-// Cycled on every wall hit, like the old DVD idle screen.
-const COLORS = ["#ffffff", "#ff4b4b", "#ffd23f", "#3fd66f", "#4bb8ff", "#c86bff", "#ff8ad4"];
+// Unequal axes, so the bounce path tilts off the plain 45° diagonal.
+const SPEED_X = 84; // px/s
+const SPEED_Y = 136; // px/s
+
+// The oval outline the title rides inside. The padding is what keeps the
+// letters clear of the curve, which pulls in hardest at their corners.
+const BOX = {
+  // A darker tan than the old #E7D8C7: same hue, dropped in lightness.
+  color: "#CEAF8D",
+  border: 3,
+  paddingX: 46,
+  paddingY: 14,
+} as const;
+
+// Peak-to-peak luminance jitter of the grain laid over the bars.
+const GRAIN_AMPLITUDE = 110;
+const GRAIN_OPACITY = 0.3;
+
+// Inks that read against the filled oval; cycled on every wall hit, like the
+// old DVD idle screen.
+const COLORS = ["#2f2a26", "#c8372d", "#9c6410", "#2f7d4f", "#2f6fb8", "#7a4bbd", "#c2418f"];
+
+const clampByte = (v: number) => (v < 0 ? 0 : v > 255 ? 255 : v);
+
+/** Film grain: one-shot neutral noise, overlaid so the bars keep their colour. */
+function Grain() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    canvas.width = FRAME.width;
+    canvas.height = FRAME.height;
+    const frame = ctx.createImageData(FRAME.width, FRAME.height);
+    const data = frame.data;
+    for (let i = 0; i < data.length; i += 4) {
+      // Mid grey is the no-op tone for the overlay blend, so noise around it
+      // only lightens and darkens the bars.
+      const v = clampByte(128 + (Math.random() - 0.5) * GRAIN_AMPLITUDE);
+      data[i] = data[i + 1] = data[i + 2] = v;
+      data[i + 3] = 255;
+    }
+    ctx.putImageData(frame, 0, 0);
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="pointer-events-none absolute inset-0 h-full w-full mix-blend-overlay"
+      style={{ opacity: GRAIN_OPACITY }}
+    />
+  );
+}
 
 function DvdTitle() {
-  const ref = useRef<HTMLSpanElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x: SCREEN.left + BOUNDS_INSET, y: SCREEN.top + BOUNDS_INSET });
   const [colorIndex, setColorIndex] = useState(0);
 
@@ -27,7 +81,7 @@ function DvdTitle() {
 
     const minX = SCREEN.left + BOUNDS_INSET;
     const minY = SCREEN.top + BOUNDS_INSET;
-    const state = { x: minX, y: minY, vx: SPEED, vy: SPEED };
+    const state = { x: minX, y: minY, vx: SPEED_X, vy: SPEED_Y };
 
     let raf = 0;
     let prev: number | null = null;
@@ -73,20 +127,33 @@ function DvdTitle() {
   }, []);
 
   return (
-    <span
+    <div
       ref={ref}
-      className="absolute whitespace-nowrap font-handjet leading-none select-none"
+      className="absolute select-none"
       style={{
         left: 0,
         top: 0,
         transform: `translate(${pos.x}px, ${pos.y}px)`,
-        fontSize: TITLE.fontSize,
-        color: COLORS[colorIndex],
-        textShadow: "0 0 18px rgba(0,0,0,0.55)",
+        padding: `${BOX.paddingY}px ${BOX.paddingX}px`,
+        border: `${BOX.border}px solid ${BOX.color}`,
+        background: BOX.color,
+        // Curved sides, flat-ish top and bottom: oval, but not a full ellipse.
+        borderRadius: "40% / 60%",
+        // Lifts the oval off the white bar.
+        boxShadow: "0 0 10px rgba(0,0,0,0.45)",
       }}
     >
-      Silent Signal
-    </span>
+      <span
+        className="block whitespace-nowrap font-handjet leading-none"
+        style={{
+          fontSize: TITLE.fontSize,
+          color: COLORS[colorIndex],
+          textShadow: "0 2px 0 rgba(0,0,0,0.12)",
+        }}
+      >
+        Silent Signal
+      </span>
+    </div>
   );
 }
 
@@ -101,28 +168,12 @@ export default function ColorBar({ onPower }: Props) {
           className="pointer-events-none absolute max-w-none select-none object-cover"
           style={{ left: -43, top: -11, width: 1200, height: 839 }}
         />
+        <Grain />
         <DvdTitle />
       </div>
       <img src="/assets/tv.svg" alt="" className="pointer-events-none absolute inset-0 h-full w-full" />
 
-      <button
-        type="button"
-        onClick={onPower}
-        aria-label="Power"
-        className="absolute outline-none transition-transform duration-100 hover:scale-110 active:scale-95"
-        style={{ left: 610, top: 662, width: 59, height: 56 }}
-      >
-        <span className="relative block h-full w-full">
-          <img
-            src="/assets/stars.svg"
-            alt=""
-            draggable={false}
-            className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none"
-            style={{ width: 92, height: (92 * 108) / 105 }}
-          />
-          <img src="/assets/btn-power.svg" alt="Power" draggable={false} className="absolute inset-0 h-full w-full select-none" />
-        </span>
-      </button>
+      <PowerButton onClick={onPower} />
     </div>
   );
 }

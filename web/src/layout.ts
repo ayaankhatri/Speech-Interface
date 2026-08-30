@@ -39,6 +39,24 @@ export const PANEL_BOTTOM = PANEL.top + PANEL.height;
 
 export const CONTROLS = { top: 662, height: 62 } as const;
 
+// The tube's optical centre, which the CRT collapse converges on.
+export const SCREEN_CENTER = {
+  x: SCREEN.left + SCREEN.width / 2,
+  y: SCREEN.top + SCREEN.height / 2,
+} as const;
+
+// Power holds one spot on every screen, so switching the set on or off never
+// moves the button out from under the cursor.
+export const POWER = { left: 197.6, top: 667, width: 54.79, height: 52 } as const;
+
+// The remaining controls keep the row they occupied when power sat inside it.
+export const CONTROL_ROW = {
+  left: 276.39,
+  top: CONTROLS.top,
+  width: 520,
+  height: CONTROLS.height,
+} as const;
+
 export const STICKERS = {
   folder: { left: 660, top: 100, width: 66, height: 59, rotate: 7 },
   stars: { left: 382, top: 182, width: 126, height: 129, rotate: -30 },

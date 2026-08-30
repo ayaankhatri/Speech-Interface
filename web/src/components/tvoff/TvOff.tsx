@@ -1,5 +1,6 @@
 // TV turn-off screen: analog static, the white veil easing off, then a CRT collapse.
 import { useEffect, useRef } from "react";
+import { SCREEN_CENTER } from "../../layout";
 
 interface Props {
   onDone: () => void;
@@ -59,6 +60,9 @@ export default function TvOff({ onDone }: Props) {
         <div className="absolute inset-0 bg-black" />
         <div
           className="tv-off-collapse absolute inset-0"
+          // Converge on the tube's centre, not the frame's — the screen sits
+          // left of centre inside the TV artwork.
+          style={{ transformOrigin: `${SCREEN_CENTER.x}px ${SCREEN_CENTER.y}px` }}
           onAnimationEnd={(e) => {
             if (e.animationName === COLLAPSE_ANIMATION) onDone();
           }}
