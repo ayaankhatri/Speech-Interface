@@ -103,6 +103,13 @@ export default function App() {
         >
           add
         </button>
+
+        {stream.latestPrediction && (
+          <span className="text-sm text-white/50">
+            {stream.latestPrediction.word} p={stream.latestPrediction.confidence.toFixed(2)}
+          </span>
+        )}
+        {stream.error && <span className="text-sm text-status-red">{stream.error}</span>}
       </div>
     </div>
   );
