@@ -1,17 +1,31 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { BOX_TEXT, PANEL_INNER_WIDTH } from "../layout";
+import { BOX_TEXT, PANEL_INNER_WIDTH } from "../../layout";
 import DinoRunner from "./DinoRunner";
 
 interface Props {
   words: string[];
   jumpSignal: number;
+  lineHeight?: number;
+  maxRows?: number;
+  fontSize?: number;
+  trackWidth?: number;
+  align?: "left" | "center";
+  dinoInteraction?: "hover" | "click";
 }
 
 const LINE_HEIGHT = 72;
 const MAX_ROWS = 3;
-const CONTENT_HEIGHT = MAX_ROWS * LINE_HEIGHT;
 
-export default function DetectedWords({ words, jumpSignal }: Props) {
+export default function DetectedWords({
+  words,
+  jumpSignal,
+  lineHeight = LINE_HEIGHT,
+  maxRows = MAX_ROWS,
+  fontSize = BOX_TEXT.fontSize,
+  trackWidth = PANEL_INNER_WIDTH,
+  align = "left",
+  dinoInteraction = "hover",
+}: Props) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [start, setStart] = useState(0);
 
@@ -34,13 +48,13 @@ export default function DetectedWords({ words, jumpSignal }: Props) {
       <div className="flex h-full items-center">
         <div
           ref={contentRef}
-          className="w-full overflow-hidden text-left font-handjet"
+          className={`w-full overflow-hidden font-handjet ${align === "center" ? "text-center" : "text-left"}`}
           style={{
-            maxHeight: CONTENT_HEIGHT,
+            maxHeight: maxRows * lineHeight,
             color: BOX_TEXT.color,
-            fontSize: BOX_TEXT.fontSize,
+            fontSize,
             fontWeight: BOX_TEXT.fontWeight,
-            lineHeight: `${LINE_HEIGHT}px`,
+            lineHeight: `${lineHeight}px`,
             overflowWrap: "anywhere",
             wordBreak: "break-word",
           }}
@@ -58,7 +72,7 @@ export default function DetectedWords({ words, jumpSignal }: Props) {
         </div>
       </div>
 
-      <DinoRunner trackWidth={PANEL_INNER_WIDTH} minX={0} jumpSignal={jumpSignal} />
+      <DinoRunner trackWidth={trackWidth} minX={0} jumpSignal={jumpSignal} interaction={dinoInteraction} />
     </>
   );
 }

@@ -9,6 +9,8 @@ export interface WordStream {
   streaming: boolean;
   addWord: (word: string) => void;
   clear: () => void;
+  connect: () => void;
+  disconnect: () => void;
   toggleConnection: () => void;
   startStream: () => void;
   stopStream: () => void;
@@ -40,12 +42,15 @@ export function useWordStream(): WordStream {
     setConnected(true);
     setStreaming(true);
   }, []);
-  const toggleConnection = useCallback(() => {
-    setConnected((prev) => {
-      if (prev) stopStream();
-      return !prev;
-    });
+  const connect = useCallback(() => setConnected(true), []);
+  const disconnect = useCallback(() => {
+    setConnected(false);
+    stopStream();
   }, [stopStream]);
+  const toggleConnection = useCallback(() => {
+    if (connected) disconnect();
+    else connect();
+  }, [connected, connect, disconnect]);
 
   useEffect(() => {
     if (!streaming) return;
@@ -67,6 +72,8 @@ export function useWordStream(): WordStream {
     streaming,
     addWord,
     clear,
+    connect,
+    disconnect,
     toggleConnection,
     startStream,
     stopStream,

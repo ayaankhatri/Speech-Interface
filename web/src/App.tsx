@@ -1,40 +1,42 @@
+// App shell
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { CONTROLS, FRAME, PANEL_LEFT, SCREEN, STICKERS, TITLE } from "./layout";
+import { FRAME } from "./layout";
 import { useWordStream } from "./hooks/useWordStream";
-import { probabilisticWordsFor } from "./vocab";
-import ConnectionStatus from "./components/ConnectionStatus";
-import Panel from "./components/Panel";
-import DetectedWords from "./components/DetectedWords";
-import ProbabilisticWords from "./components/ProbabilisticWords";
-import ControlButtons from "./components/ControlButtons";
+import Home from "./components/home/Home";
+import History from "./components/history/History";
+import ColorBar from "./components/colorbar/ColorBar";
+import TvOff from "./components/tvoff/TvOff";
+import MobileHome from "./components/mobile/MobileHome";
+import MobileHistory from "./components/mobile/MobileHistory";
+import MobileTvOff from "./components/mobile/MobileTvOff";
+import MobileOff from "./components/mobile/MobileOff";
+
+type Power = "on" | "closing" | "collapsing" | "off";
+
+// How long the disconnected status stays readable before the tube collapses.
+const OFF_STATUS_MS = 600;
+// The set comes up disconnected, then links, so the change is visible.
+const CONNECT_DELAY_MS = 1400;
 
 export default function App() {
   const stream = useWordStream();
   const [showHistory, setShowHistory] = useState(false);
+  // "closing" holds the lit picture while the status flips to Disconnected;
+  // "collapsing" is the CRT discharge; "off" is the dead screen.
+  const [power, setPower] = useState<Power>("off");
   const [draft, setDraft] = useState("");
+  const powerTimer = useRef<number | null>(null);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [mobile, setMobile] = useState(false);
 
-  const titleTextRef = useRef<HTMLSpanElement>(null);
-  const [folderPos, setFolderPos] = useState<{ left: number; top: number }>({
-    left: STICKERS.folder.left,
-    top: STICKERS.folder.top,
-  });
-
-  useLayoutEffect(() => {
-    const el = titleTextRef.current;
-    if (!el) return;
-    const place = () => {
-      const rightEdge = SCREEN.left + el.offsetLeft + el.offsetWidth;
-      const bottomEdge = TITLE.top + el.offsetHeight;
-      setFolderPos({ left: rightEdge - 14, top: bottomEdge - STICKERS.folder.height / 2 });
-    };
-    place();
-    const ro = new ResizeObserver(place);
-    ro.observe(el);
-    document.fonts?.ready.then(place).catch(() => {});
-    return () => ro.disconnect();
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
   }, []);
 
   useLayoutEffect(() => {
@@ -54,12 +56,43 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "Space" && document.activeElement?.tagName !== "INPUT") {
         e.preventDefault();
+        if (power !== "on") return;
         stream.streaming ? stream.stopStream() : stream.startStream();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [stream]);
+  }, [stream, power]);
+
+  const clearPowerTimer = () => {
+    if (powerTimer.current !== null) {
+      window.clearTimeout(powerTimer.current);
+      powerTimer.current = null;
+    }
+  };
+  useEffect(() => clearPowerTimer, []);
+
+  // History stays up through the shutdown, so switching off from it closes the
+  // set directly instead of flashing home first.
+  const powerOff = () => {
+    clearPowerTimer();
+    stream.disconnect();
+    setPower("closing");
+    powerTimer.current = window.setTimeout(() => setPower("collapsing"), OFF_STATUS_MS);
+  };
+
+  // Runs once the tube has finished collapsing.
+  const finishPowerOff = () => {
+    setPower("off");
+    // The set always comes back up on home.
+    setShowHistory(false);
+  };
+
+  const powerOn = () => {
+    clearPowerTimer();
+    setPower("on");
+    powerTimer.current = window.setTimeout(() => stream.connect(), CONNECT_DELAY_MS);
+  };
 
   const submitDraft = () => {
     if (!draft.trim()) return;
@@ -67,56 +100,44 @@ export default function App() {
     setDraft("");
   };
 
-  const candidates = probabilisticWordsFor(stream.latest);
+  if (mobile) {
+    if (power === "collapsing") return <MobileTvOff onDone={finishPowerOff} />;
+    if (power === "off") return <MobileOff onPower={powerOn} />;
+    return showHistory ? (
+      <MobileHistory
+        words={stream.words}
+        connected={stream.connected}
+        onBack={() => setShowHistory(false)}
+        onClear={stream.clear}
+        onPower={powerOff}
+      />
+    ) : (
+      <MobileHome stream={stream} onPower={powerOff} onHistory={() => setShowHistory(true)} />
+    );
+  }
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 p-4">
       <div ref={wrapperRef} className="flex min-h-0 w-full flex-1 items-center justify-center">
         <div
           className="relative overflow-hidden bg-gradient-to-b from-[#191717] to-[#484645]"
-          style={{
-            width: FRAME.width,
-            height: FRAME.height,
-            transform: `scale(${scale})`,
-            transformOrigin: "center",
-          }}
+          style={{ width: FRAME.width, height: FRAME.height, transform: `scale(${scale})`, transformOrigin: "center" }}
         >
-          <img src="/assets/tv.svg" alt="" className="absolute inset-0 h-full w-full" />
-
-          <Sticker src="/assets/stars.svg" spec={STICKERS.stars} />
-          <Sticker src="/assets/camera.svg" spec={STICKERS.camera} />
-
-          <h1
-            className="absolute text-center font-handjet text-white"
-            style={{ top: TITLE.top, fontSize: TITLE.fontSize, left: SCREEN.left, width: SCREEN.width }}
-          >
-            <span ref={titleTextRef}>Silent Signal</span>
-          </h1>
-
-          <Sticker src="/assets/folder.svg" spec={{ ...STICKERS.folder, ...folderPos }} />
-
-          <ConnectionStatus connected={stream.connected} onToggle={stream.toggleConnection} />
-
-          <Panel left={PANEL_LEFT.detected} label="Detected Word">
-            <DetectedWords words={stream.words} jumpSignal={stream.jumpSignal} />
-          </Panel>
-
-          <Panel left={PANEL_LEFT.probabilistic} label="Probabilistic Words">
-            <ProbabilisticWords candidates={candidates} />
-          </Panel>
-
-          <ControlButtons
-            streaming={stream.streaming}
-            onPower={stream.toggleConnection}
-            onStart={stream.startStream}
-            onStop={stream.stopStream}
-            onHistory={() => setShowHistory((v) => !v)}
-            onClear={stream.clear}
-          />
+          <Home stream={stream} onPower={powerOff} onHistory={() => setShowHistory((v) => !v)} />
 
           {showHistory && (
-            <HistoryOverlay words={stream.words} onClose={() => setShowHistory(false)} />
+            <History
+              words={stream.words}
+              connected={stream.connected}
+              onBack={() => setShowHistory(false)}
+              onClear={stream.clear}
+              onPower={powerOff}
+            />
           )}
+
+          {power === "off" && <ColorBar onPower={powerOn} />}
+
+          {power === "collapsing" && <TvOff onDone={finishPowerOff} />}
         </div>
       </div>
 
@@ -136,62 +157,6 @@ export default function App() {
         >
           add
         </button>
-      </div>
-    </div>
-  );
-}
-
-function Sticker({
-  src,
-  spec,
-}: {
-  src: string;
-  spec: { left: number; top: number; width: number; height: number; rotate: number };
-}) {
-  return (
-    <img
-      src={src}
-      alt=""
-      draggable={false}
-      className="pointer-events-none absolute select-none"
-      style={{
-        left: spec.left,
-        top: spec.top,
-        width: spec.width,
-        height: spec.height,
-        transform: `rotate(${spec.rotate}deg)`,
-      }}
-    />
-  );
-}
-
-function HistoryOverlay({ words, onClose }: { words: string[]; onClose: () => void }) {
-  return (
-    <div
-      className="absolute z-10 flex flex-col rounded-[10px] border-[3px] border-dashed border-white/70 bg-black/85 p-4 font-handjet text-white backdrop-blur-sm"
-      style={{
-        left: SCREEN.left + 40,
-        top: SCREEN.top + 40,
-        width: SCREEN.width - 80,
-        height: CONTROLS.top - SCREEN.top - 40,
-      }}
-    >
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-[28px]">History · {words.length} words</span>
-        <button type="button" onClick={onClose} className="text-[24px] text-white/60 hover:text-white">
-          ✕ close
-        </button>
-      </div>
-      <div className="flex flex-wrap content-start gap-x-3 gap-y-1 overflow-y-auto text-[24px] leading-tight">
-        {words.length === 0 ? (
-          <span className="text-white/40">Nothing said yet.</span>
-        ) : (
-          words.map((w, i) => (
-            <span key={i} className="text-white/85">
-              {w}
-            </span>
-          ))
-        )}
       </div>
     </div>
   );

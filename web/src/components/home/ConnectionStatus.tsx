@@ -1,4 +1,4 @@
-import { STATUS } from "../layout";
+import { STATUS } from "../../layout";
 
 interface Props {
   connected: boolean;
