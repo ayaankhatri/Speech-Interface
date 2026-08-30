@@ -31,7 +31,7 @@ export default function MobileHome({ stream, onPower, onHistory }: Props) {
 
   return (
     <MobileFrame scrollable contentHeight={CONTENT_HEIGHT}>
-      <MobileStatus connected={stream.connected} />
+      <MobileStatus connected={stream.powered} />
 
       <span
         ref={folder.titleRef}

@@ -13,9 +13,17 @@ export interface WordStream {
   latest: string;
   latestPrediction: Prediction | null;
   jumpSignal: number;
-  /** Power intent: the set is switched on and holding the feed open. */
+  /**
+   * Power intent: the set is switched on and has a word source, whether that is
+   * a live classifier or the built-in simulator. This is what the status light
+   * reports, so switching on reads "Connected".
+   */
   powered: boolean;
-  /** What the feed actually reports — false when no classifier is listening. */
+  /**
+   * Whether a classifier is actually answering on the wire. Drives the error
+   * text and decides if the simulator should stand in — not the status light,
+   * which would otherwise read "Disconnected" on a set that is plainly running.
+   */
   connected: boolean;
   streaming: boolean;
   error: string;

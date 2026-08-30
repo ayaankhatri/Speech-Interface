@@ -100,7 +100,7 @@ export default function App() {
         {showHistory ? (
           <MobileHistory
             words={stream.words}
-            connected={stream.connected}
+            connected={stream.powered}
             onBack={() => setShowHistory(false)}
             onClear={stream.clear}
             onPower={powerOff}
@@ -125,7 +125,7 @@ export default function App() {
           {showHistory && (
             <History
               words={stream.words}
-              connected={stream.connected}
+              connected={stream.powered}
               onBack={() => setShowHistory(false)}
               onClear={stream.clear}
               onPower={powerOff}

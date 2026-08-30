@@ -55,7 +55,7 @@ export default function Home({ stream, onPower, onHistory }: Props) {
 
       <Sticker src="/assets/folder.svg" spec={{ ...STICKERS.folder, ...folderPos }} />
 
-      <ConnectionStatus connected={stream.connected} onToggle={onPower} />
+      <ConnectionStatus connected={stream.powered} onToggle={onPower} />
 
       <Panel left={PANEL_LEFT.detected} label="Detected Word">
         <DetectedWords words={stream.words} jumpSignal={stream.jumpSignal} />
