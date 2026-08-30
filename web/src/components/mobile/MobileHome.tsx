@@ -2,7 +2,8 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import type { WordStream } from "../../hooks/useWordStream";
 import { probabilisticWordsFor } from "../../vocab";
-import DinoRunner from "../home/DinoRunner";
+import { useFolderAnchor } from "../../hooks/useFolderAnchor";
+import DetectedWords from "../home/DetectedWords";
 
 interface Props {
   stream: WordStream;
@@ -18,9 +19,18 @@ const CONTENT_HEIGHT = 985;
 const DETECTED_BOX = { left: 18.5, top: 178, width: 313, height: 313 };
 const PROB_BOX = { left: 18.5, top: 555, width: 313, height: 313 };
 
+const BOX_PADDING = 16;
+const BOX_INNER_WIDTH = DETECTED_BOX.width - 2 * 3 - 2 * BOX_PADDING;
+const DETECTED_FONT = 48;
+const DETECTED_LINE = 58;
+const FOLDER = { width: 50, height: 43 };
+const CAMERA = { width: 81, height: 67 };
+
 export default function MobileHome({ stream, onPower, onHistory }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  // The title span is itself absolutely positioned, so its own offsets are the origin.
+  const folder = useFolderAnchor({ ...FOLDER, overlap: 11 });
 
   useLayoutEffect(() => {
     const el = wrapperRef.current;
@@ -36,7 +46,6 @@ export default function MobileHome({ stream, onPower, onHistory }: Props) {
   }, []);
 
   const candidates = probabilisticWordsFor(stream.latest);
-  const detected = stream.words.length ? stream.words.join(" ") : "Listening…";
 
   return (
     <div ref={wrapperRef} className="flex h-full w-full items-center justify-center overflow-hidden bg-[#26272b]">
@@ -51,7 +60,11 @@ export default function MobileHome({ stream, onPower, onHistory }: Props) {
         >
           <div className="relative" style={{ width: INNER.width, height: CONTENT_HEIGHT }}>
             <div
-              className="absolute rounded-full border-2 border-[#3a6e2b] bg-[#59eb30] shadow-[4px_12px_4px_0px_rgba(0,0,0,0.5)]"
+              className={`absolute rounded-full border-2 shadow-[4px_12px_4px_0px_rgba(0,0,0,0.5)] transition-colors ${
+                stream.connected
+                  ? "border-status-green-edge bg-status-green"
+                  : "border-status-red-edge bg-status-red"
+              }`}
               style={{ left: 8.5, top: 17, width: 17, height: 17 }}
             />
             <span
@@ -62,18 +75,27 @@ export default function MobileHome({ stream, onPower, onHistory }: Props) {
             </span>
 
             <span
+              ref={folder.titleRef}
               className="absolute whitespace-nowrap font-handjet leading-[normal] text-white"
               style={{ left: 37.5, top: 56, fontSize: 48 }}
             >
               Silent Signal
             </span>
-            <img
-              src="/assets/folder.svg"
-              alt=""
-              draggable={false}
-              className="pointer-events-none absolute select-none"
-              style={{ left: 287.5, top: 79, width: 50, height: 43, transform: "rotate(6.89deg)" }}
-            />
+            {folder.pos && (
+              <img
+                src="/assets/folder.svg"
+                alt=""
+                draggable={false}
+                className="pointer-events-none absolute select-none"
+                style={{
+                  left: folder.pos.left,
+                  top: folder.pos.top,
+                  width: folder.width,
+                  height: folder.height,
+                  transform: "rotate(6.89deg)",
+                }}
+              />
+            )}
 
             {/* Detected words */}
             <span
@@ -84,15 +106,18 @@ export default function MobileHome({ stream, onPower, onHistory }: Props) {
             </span>
             <div
               className="absolute rounded-[10px] border-[3px] border-dashed border-[#fefefe]"
-              style={{ left: DETECTED_BOX.left, top: DETECTED_BOX.top, width: DETECTED_BOX.width, height: DETECTED_BOX.height }}
+              style={{ left: DETECTED_BOX.left, top: DETECTED_BOX.top, width: DETECTED_BOX.width, height: DETECTED_BOX.height, padding: BOX_PADDING }}
             >
-              <div
-                className="absolute font-handjet leading-[normal] text-white [word-break:break-word]"
-                style={{ left: 16, top: 20, width: DETECTED_BOX.width - 32, fontSize: 48 }}
-              >
-                {detected}
-              </div>
-              <DinoRunner trackWidth={DETECTED_BOX.width - 20} minX={0} jumpSignal={stream.jumpSignal} interaction="click" />
+              <DetectedWords
+                words={stream.words}
+                jumpSignal={stream.jumpSignal}
+                fontSize={DETECTED_FONT}
+                lineHeight={DETECTED_LINE}
+                maxRows={3}
+                align="center"
+                trackWidth={BOX_INNER_WIDTH}
+                dinoInteraction="click"
+              />
             </div>
 
             {/* Probabilistic words */}
@@ -113,9 +138,10 @@ export default function MobileHome({ stream, onPower, onHistory }: Props) {
               className="absolute rounded-[10px] border-[3px] border-dashed border-[#fefefe]"
               style={{ left: PROB_BOX.left, top: PROB_BOX.top, width: PROB_BOX.width, height: PROB_BOX.height }}
             >
+              {/* Rows read left-aligned, block sits vertically centred in the box */}
               <ol
-                className="absolute font-handjet leading-[normal] text-white"
-                style={{ left: 20, top: 12, right: 12, fontSize: 44 }}
+                className="absolute inset-0 flex flex-col justify-center text-left font-handjet leading-[normal] text-white"
+                style={{ paddingLeft: 20, paddingRight: 12, fontSize: 44 }}
               >
                 {Array.from({ length: 5 }).map((_, i) => (
                   <li key={i} className="flex items-baseline gap-3 whitespace-nowrap">
@@ -128,13 +154,19 @@ export default function MobileHome({ stream, onPower, onHistory }: Props) {
               </ol>
             </div>
 
-            {/* Stickers */}
+            {/* Stickers — camera straddles the probabilistic box's bottom edge */}
             <img
               src="/assets/camera.svg"
               alt=""
               draggable={false}
               className="pointer-events-none absolute select-none"
-              style={{ left: 256.5, top: 812, width: 81, height: 67, transform: "rotate(20.2deg)" }}
+              style={{
+                left: 256.5,
+                top: PROB_BOX.top + PROB_BOX.height - CAMERA.height / 2,
+                width: CAMERA.width,
+                height: CAMERA.height,
+                transform: "rotate(110.2deg)",
+              }}
             />
 
             {/* Controls */}

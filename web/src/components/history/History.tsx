@@ -1,7 +1,8 @@
-// History screen
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+﻿// History screen
+import { useLayoutEffect, useRef, useState } from "react";
 import { SCREEN, STICKERS, TITLE } from "../../layout";
 import ConnectionStatus from "../home/ConnectionStatus";
+import BoxRunners from "./BoxRunners";
 
 interface Props {
   words: string[];
@@ -12,159 +13,8 @@ interface Props {
 }
 
 const BOX = { left: 95, top: 227, width: 810, height: 380 };
-const BASE_PERIMETER = 2 * (BOX.width + BOX.height);
-const SPEED = 150;
-const CLOSED_MS = 200;
-const CHASE_MS = 1000;
-const RESET_MS = 500;
-const COIN_COUNT = 6;
-const PAC_SIZE = 47;
-const GHOST_SIZE = 57;
-const COIN_SIZE = 27;
 
 const TEXT = { left: 125, top: 287, width: 720, height: 260 };
-
-type Edge = "top" | "right" | "bottom" | "left";
-
-function pathPoint(frac: number): { x: number; y: number; edge: Edge } {
-  const { left: L, top: T, width: W, height: H } = BOX;
-  const per = 2 * (W + H);
-  let d = ((((frac % 1) + 1) % 1)) * per;
-  if (d < W) return { x: L + d, y: T, edge: "top" };
-  d -= W;
-  if (d < H) return { x: L + W, y: T + d, edge: "right" };
-  d -= H;
-  if (d < W) return { x: L + W - d, y: T + H, edge: "bottom" };
-  d -= W;
-  return { x: L, y: T + H - d, edge: "left" };
-}
-
-function pacTransform(edge: Edge): string {
-  if (edge === "right") return "rotate(90deg)";
-  if (edge === "bottom") return "scaleX(-1)";
-  if (edge === "left") return "rotate(-90deg)";
-  return "scaleX(1)";
-}
-
-function crossed(prev: number, cur: number, target: number): boolean {
-  if (prev <= cur) return target > prev && target <= cur;
-  return target > prev || target <= cur;
-}
-
-let coinSeq = 0;
-function makeCoins() {
-  return Array.from({ length: COIN_COUNT }, () => ({ id: coinSeq++, frac: Math.random() }));
-}
-
-function BoxRunners({ chaseSignal }: { chaseSignal: number }) {
-  const [coins, setCoins] = useState(makeCoins);
-  const [pac, setPac] = useState<{ x: number; y: number; edge: Edge; closed: boolean }>(() => ({
-    ...pathPoint(0),
-    closed: false,
-  }));
-  const [ghost, setGhost] = useState(() => pathPoint(0.5));
-  const [pacHidden, setPacHidden] = useState(false);
-
-  const coinsRef = useRef(coins);
-  coinsRef.current = coins;
-  const phaseRef = useRef<"run" | "chase" | "caught">("run");
-  const chaseStartRef = useRef(0);
-  const caughtAtRef = useRef(0);
-  const closedUntilRef = useRef(0);
-
-  useEffect(() => {
-    if (chaseSignal > 0) {
-      phaseRef.current = "chase";
-      chaseStartRef.current = performance.now();
-    }
-  }, [chaseSignal]);
-
-  useEffect(() => {
-    let raf = 0;
-    let start: number | null = null;
-    let prevFrac = 0;
-    const loop = (t: number) => {
-      if (start === null) {
-        start = t;
-        prevFrac = 0;
-      }
-      const frac = (((t - start) / 1000) * SPEED / BASE_PERIMETER) % 1;
-
-      const current = coinsRef.current;
-      const eaten = current.filter((c) => crossed(prevFrac, frac, c.frac)).map((c) => c.id);
-      if (eaten.length) {
-        closedUntilRef.current = t + CLOSED_MS;
-        setCoins((prev) => {
-          const kept = prev.filter((c) => !eaten.includes(c.id));
-          const added = eaten.map(() => ({ id: coinSeq++, frac: Math.random() }));
-          return [...kept, ...added];
-        });
-      }
-
-      let gap = 0.5;
-      if (phaseRef.current === "chase") {
-        const prog = Math.min(1, (t - chaseStartRef.current) / CHASE_MS);
-        gap = 0.5 * (1 + prog);
-        if (prog >= 1) {
-          phaseRef.current = "caught";
-          caughtAtRef.current = t;
-          setPacHidden(true);
-        }
-      } else if (phaseRef.current === "caught") {
-        gap = 1;
-        if (t - caughtAtRef.current > RESET_MS) {
-          phaseRef.current = "run";
-          setPacHidden(false);
-        }
-      }
-
-      const p = pathPoint(frac);
-      setPac({ x: p.x, y: p.y, edge: p.edge, closed: t < closedUntilRef.current });
-      setGhost(pathPoint(frac + gap));
-
-      prevFrac = frac;
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  return (
-    <>
-      {coins.map((c) => {
-        const p = pathPoint(c.frac);
-        return (
-          <img
-            key={c.id}
-            src="/assets/coin.svg"
-            alt=""
-            draggable={false}
-            className="pointer-events-none absolute select-none"
-            style={{ left: p.x - COIN_SIZE / 2, top: p.y - COIN_SIZE / 2, width: COIN_SIZE, height: COIN_SIZE }}
-          />
-        );
-      })}
-
-      <img
-        src="/assets/ghost.svg"
-        alt=""
-        draggable={false}
-        className="pointer-events-none absolute select-none"
-        style={{ left: ghost.x - GHOST_SIZE / 2, top: ghost.y - GHOST_SIZE / 2, width: GHOST_SIZE, height: GHOST_SIZE }}
-      />
-
-      {!pacHidden && (
-        <img
-          src={pac.closed ? "/assets/pac-man-closed.svg" : "/assets/pac-man.svg"}
-          alt=""
-          draggable={false}
-          className="pointer-events-none absolute select-none"
-          style={{ left: pac.x - PAC_SIZE / 2, top: pac.y - PAC_SIZE / 2, width: PAC_SIZE, height: PAC_SIZE, transform: pacTransform(pac.edge) }}
-        />
-      )}
-    </>
-  );
-}
 
 export default function History({ words, connected, onBack, onClear, onPower }: Props) {
   const history = words.length ? words.join(" - ") + " - " : "";
@@ -240,7 +90,7 @@ export default function History({ words, connected, onBack, onClear, onPower }: 
         {history}
       </div>
 
-      <BoxRunners chaseSignal={chaseSignal} />
+      <BoxRunners box={BOX} chaseSignal={chaseSignal} speed={150} pacSize={47} ghostSize={57} coinSize={27} />
 
       <button
         type="button"
