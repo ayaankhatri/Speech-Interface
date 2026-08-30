@@ -37,7 +37,24 @@ export const PANEL_INNER_WIDTH = PANEL.width - 2 * PANEL.border - 2 * PANEL.padd
 
 export const PANEL_BOTTOM = PANEL.top + PANEL.height;
 
-export const CONTROLS = { top: 662, height: 62 } as const;
+export const CONTROLS = { top: 662, height: 62, gap: 24, button: { width: 112, height: 52 } } as const;
+
+// Power button keeps a fixed on-screen slot so the screen-off view can reuse it.
+const POWER_HEIGHT = CONTROLS.button.height;
+const POWER_WIDTH = (POWER_HEIGHT * 59) / 56;
+const CONTROLS_ROW_WIDTH = POWER_WIDTH + 4 * CONTROLS.button.width + 4 * CONTROLS.gap;
+
+export const POWER = {
+  left: SCREEN.left + (SCREEN.width - CONTROLS_ROW_WIDTH) / 2,
+  top: CONTROLS.top + (CONTROLS.height - POWER_HEIGHT) / 2,
+  width: POWER_WIDTH,
+  height: POWER_HEIGHT,
+} as const;
+
+export const CONTROLS_ROW_LEFT = POWER.left + POWER.width + CONTROLS.gap;
+
+// Time the connection indicator lingers on its old state while the TV animates.
+export const POWER_STATUS_DELAY_MS = 600;
 
 export const STICKERS = {
   folder: { left: 660, top: 100, width: 66, height: 59, rotate: 7 },

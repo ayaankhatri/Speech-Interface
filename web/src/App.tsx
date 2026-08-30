@@ -1,6 +1,6 @@
 // App shell
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { FRAME } from "./layout";
+import { FRAME, POWER_STATUS_DELAY_MS } from "./layout";
 import { useWordStream } from "./hooks/useWordStream";
 import Home from "./components/home/Home";
 import History from "./components/history/History";
@@ -12,7 +12,7 @@ import MobileHistory from "./components/mobile/MobileHistory";
 export default function App() {
   const stream = useWordStream();
   const [showHistory, setShowHistory] = useState(false);
-  const [turnOff, setTurnOff] = useState<"idle" | "status" | "screen">("idle");
+  const [turnOff, setTurnOff] = useState<"idle" | "status" | "screen" | "booting">("idle");
   const [draft, setDraft] = useState("");
 
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -55,12 +55,16 @@ export default function App() {
     setShowHistory(false);
     if (stream.connected) stream.toggleConnection();
     setTurnOff("status");
-    window.setTimeout(() => setTurnOff("screen"), 600);
+    window.setTimeout(() => setTurnOff("screen"), POWER_STATUS_DELAY_MS);
   };
 
   const powerOn = () => {
-    if (!stream.connected) stream.toggleConnection();
-    setTurnOff("idle");
+    // Show the home screen still reading "Disconnected", then flip it once the TV is back on.
+    setTurnOff("booting");
+    window.setTimeout(() => {
+      if (!stream.connected) stream.toggleConnection();
+      setTurnOff("idle");
+    }, POWER_STATUS_DELAY_MS);
   };
 
   const submitDraft = () => {

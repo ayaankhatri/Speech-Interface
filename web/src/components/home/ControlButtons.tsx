@@ -1,4 +1,5 @@
-import { CONTROLS, SCREEN } from "../../layout";
+import { CONTROLS, CONTROLS_ROW_LEFT } from "../../layout";
+import PowerButton from "../PowerButton";
 
 interface Props {
   streaming: boolean;
@@ -8,9 +9,6 @@ interface Props {
   onHistory: () => void;
   onClear: () => void;
 }
-
-const BTN_W = 112;
-const BTN_H = 52;
 
 interface ButtonSpec {
   key: string;
@@ -35,51 +33,33 @@ export default function ControlButtons({
     { key: "clear", src: "/assets/btn-clear.svg", alt: "Clear", onClick: onClear },
   ];
   return (
-    <div
-      className="absolute flex items-center justify-center gap-6"
-      style={{ left: SCREEN.left, top: CONTROLS.top, width: SCREEN.width, height: CONTROLS.height }}
-    >
-      <button
-        type="button"
-        onClick={onPower}
-        aria-label="Power"
-        className="relative outline-none transition-transform duration-100 hover:scale-110 active:scale-95"
-      >
-        <img
-          src="/assets/stars.svg"
-          alt=""
-          draggable={false}
-          className="pointer-events-none absolute left-1/2 top-1/2 -z-10 -translate-x-1/2 -translate-y-1/2 select-none"
-          style={{ width: 92, height: (92 * 108) / 105 }}
-        />
-        <img
-          src="/assets/btn-power.svg"
-          alt="Power"
-          draggable={false}
-          className="relative select-none"
-          style={{ height: BTN_H, width: (BTN_H * 59) / 56 }}
-        />
-      </button>
+    <>
+      <PowerButton onClick={onPower} />
 
-      {buttons.map((b) => (
-        <button
-          key={b.key}
-          type="button"
-          onClick={b.onClick}
-          aria-label={b.alt}
-          className={`outline-none transition-transform duration-100 hover:scale-110 active:scale-95 ${
-            b.active ? "scale-105 drop-shadow-[0_0_10px_rgba(89,235,48,0.7)]" : ""
-          }`}
-        >
-          <img
-            src={b.src}
-            alt={b.alt}
-            draggable={false}
-            className="select-none"
-            style={{ width: BTN_W, height: BTN_H }}
-          />
-        </button>
-      ))}
-    </div>
+      <div
+        className="absolute flex items-center"
+        style={{ left: CONTROLS_ROW_LEFT, top: CONTROLS.top, height: CONTROLS.height, gap: CONTROLS.gap }}
+      >
+        {buttons.map((b) => (
+          <button
+            key={b.key}
+            type="button"
+            onClick={b.onClick}
+            aria-label={b.alt}
+            className={`outline-none transition-transform duration-100 hover:scale-110 active:scale-95 ${
+              b.active ? "scale-105 drop-shadow-[0_0_10px_rgba(89,235,48,0.7)]" : ""
+            }`}
+          >
+            <img
+              src={b.src}
+              alt={b.alt}
+              draggable={false}
+              className="select-none"
+              style={{ width: CONTROLS.button.width, height: CONTROLS.button.height }}
+            />
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
