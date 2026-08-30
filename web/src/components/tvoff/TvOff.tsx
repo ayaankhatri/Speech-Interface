@@ -1,4 +1,5 @@
 // TV turn-off screen: analog static, the white veil easing off, then a CRT collapse.
+import { SCREEN_CENTER } from "../../layout";
 import TvStatic, { COLLAPSE_ANIMATION } from "../common/TvStatic";
 
 interface Props {
@@ -15,6 +16,9 @@ export default function TvOff({ onDone }: Props) {
         <div className="absolute inset-0 bg-black" />
         <div
           className="tv-off-collapse absolute inset-0"
+          // Converge on the tube's centre, not the frame's — the screen sits
+          // left of centre inside the TV artwork.
+          style={{ transformOrigin: `${SCREEN_CENTER.x}px ${SCREEN_CENTER.y}px` }}
           onAnimationEnd={(e) => {
             // The veil's animationend bubbles here too — only the collapse ends the sequence.
             if (e.animationName === COLLAPSE_ANIMATION) onDone();

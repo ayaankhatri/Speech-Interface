@@ -19,6 +19,7 @@ export default function App() {
   const [turnOff, setTurnOff] = useState<"idle" | "status" | "screen">("idle");
   const [turningOn, setTurningOn] = useState(false);
   const [draft, setDraft] = useState("");
+  const powerTimer = useRef<number | null>(null);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -49,13 +50,24 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "Space" && document.activeElement?.tagName !== "INPUT") {
         e.preventDefault();
+        if (power !== "on") return;
         stream.streaming ? stream.stopStream() : stream.startStream();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [stream]);
+  }, [stream, power]);
 
+  const clearPowerTimer = () => {
+    if (powerTimer.current !== null) {
+      window.clearTimeout(powerTimer.current);
+      powerTimer.current = null;
+    }
+  };
+  useEffect(() => clearPowerTimer, []);
+
+  // History stays up through the shutdown, so switching off from it closes the
+  // set directly instead of flashing home first.
   const powerOff = () => {
     // Whatever screen you powered off from stays up until the tube collapses;
     // it is cleared on the way back on, not here.
@@ -118,7 +130,7 @@ export default function App() {
             />
           )}
 
-          {!stream.connected && turnOff === "idle" && <ColorBar onPower={powerOn} />}
+          {power === "off" && <ColorBar onPower={powerOn} />}
 
           {turnOff === "screen" && <TvOff onDone={() => setTurnOff("idle")} />}
 

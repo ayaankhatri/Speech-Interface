@@ -117,8 +117,8 @@ body {
     opacity: 0;
   }
 }
+/* transform-origin is set inline, at the tube's centre. */
 .tv-off-collapse {
-  transform-origin: center;
   animation: tvOffCollapse 1.4s cubic-bezier(0.5, 0, 0.4, 1) forwards;
 }
 
