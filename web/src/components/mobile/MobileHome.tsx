@@ -24,6 +24,7 @@ const BOX_INNER_WIDTH = DETECTED_BOX.width - 2 * 3 - 2 * BOX_PADDING;
 const DETECTED_FONT = 48;
 const DETECTED_LINE = 58;
 const FOLDER = { width: 50, height: 43 };
+const CAMERA = { width: 81, height: 67 };
 
 export default function MobileHome({ stream, onPower, onHistory }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -137,14 +138,15 @@ export default function MobileHome({ stream, onPower, onHistory }: Props) {
               className="absolute rounded-[10px] border-[3px] border-dashed border-[#fefefe]"
               style={{ left: PROB_BOX.left, top: PROB_BOX.top, width: PROB_BOX.width, height: PROB_BOX.height }}
             >
+              {/* Rows read left-aligned, block sits vertically centred in the box */}
               <ol
-                className="absolute font-handjet leading-[normal] text-white"
-                style={{ left: 20, top: 12, right: 12, fontSize: 44 }}
+                className="absolute inset-0 flex flex-col justify-center text-left font-handjet leading-[normal] text-white"
+                style={{ paddingLeft: 20, paddingRight: 12, fontSize: 44 }}
               >
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <li key={i} className="flex items-baseline justify-center gap-3 whitespace-nowrap">
-                    <span className="shrink-0 text-white/60">{i + 1}.</span>
-                    <span className="min-w-0 overflow-hidden text-ellipsis">
+                  <li key={i} className="flex items-baseline gap-3 whitespace-nowrap">
+                    <span className="w-[30px] shrink-0 text-white/60">{i + 1}.</span>
+                    <span className="min-w-0 flex-1 overflow-hidden text-ellipsis">
                       {candidates[i] ?? <span className="text-white/25">—</span>}
                     </span>
                   </li>
@@ -152,13 +154,19 @@ export default function MobileHome({ stream, onPower, onHistory }: Props) {
               </ol>
             </div>
 
-            {/* Stickers */}
+            {/* Stickers — camera straddles the probabilistic box's bottom edge */}
             <img
               src="/assets/camera.svg"
               alt=""
               draggable={false}
               className="pointer-events-none absolute select-none"
-              style={{ left: 256.5, top: 812, width: 81, height: 67, transform: "rotate(20.2deg)" }}
+              style={{
+                left: 256.5,
+                top: PROB_BOX.top + PROB_BOX.height - CAMERA.height / 2,
+                width: CAMERA.width,
+                height: CAMERA.height,
+                transform: "rotate(110.2deg)",
+              }}
             />
 
             {/* Controls */}
