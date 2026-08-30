@@ -29,6 +29,11 @@ export default function App() {
   const power: "on" | "off" | "shutting-down" =
     turnOff !== "idle" ? "shutting-down" : stream.powered ? "on" : "off";
 
+  // The feed opens as soon as you hit power, but the light holds at
+  // Disconnected until the tube has finished coming up, so you watch it change
+  // on a lit screen instead of finding it already green.
+  const online = power === "on" && !turningOn;
+
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
     const update = () => setMobile(mq.matches);
@@ -100,13 +105,18 @@ export default function App() {
         {showHistory ? (
           <MobileHistory
             words={stream.words}
-            connected={stream.powered}
+            connected={online}
             onBack={() => setShowHistory(false)}
             onClear={stream.clear}
             onPower={powerOff}
           />
         ) : (
-          <MobileHome stream={stream} onPower={powerOff} onHistory={() => setShowHistory(true)} />
+          <MobileHome
+            stream={stream}
+            connected={online}
+            onPower={powerOff}
+            onHistory={() => setShowHistory(true)}
+          />
         )}
         {turningOn && <MobileTvOn onDone={() => setTurningOn(false)} />}
       </div>
@@ -120,12 +130,17 @@ export default function App() {
           className="relative overflow-hidden bg-gradient-to-b from-[#191717] to-[#484645]"
           style={{ width: FRAME.width, height: FRAME.height, transform: `scale(${scale})`, transformOrigin: "center" }}
         >
-          <Home stream={stream} onPower={powerOff} onHistory={() => setShowHistory((v) => !v)} />
+          <Home
+            stream={stream}
+            connected={online}
+            onPower={powerOff}
+            onHistory={() => setShowHistory((v) => !v)}
+          />
 
           {showHistory && (
             <History
               words={stream.words}
-              connected={stream.powered}
+              connected={online}
               onBack={() => setShowHistory(false)}
               onClear={stream.clear}
               onPower={powerOff}

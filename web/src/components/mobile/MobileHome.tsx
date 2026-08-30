@@ -8,6 +8,8 @@ import MobileStatus from "./MobileStatus";
 
 interface Props {
   stream: WordStream;
+  /** What the status light reports — held back until the tube has warmed up. */
+  connected: boolean;
   onPower: () => void;
   onHistory: () => void;
 }
@@ -24,14 +26,14 @@ const DETECTED_LINE = 58;
 const FOLDER = { width: 50, height: 43 };
 const CAMERA = { width: 81, height: 67 };
 
-export default function MobileHome({ stream, onPower, onHistory }: Props) {
+export default function MobileHome({ stream, connected, onPower, onHistory }: Props) {
   // The title span is itself absolutely positioned, so its own offsets are the origin.
   const folder = useFolderAnchor({ ...FOLDER, overlap: 11 });
   const candidates = probabilisticWordsFor(stream.latest);
 
   return (
     <MobileFrame scrollable contentHeight={CONTENT_HEIGHT}>
-      <MobileStatus connected={stream.powered} />
+      <MobileStatus connected={connected} />
 
       <span
         ref={folder.titleRef}
