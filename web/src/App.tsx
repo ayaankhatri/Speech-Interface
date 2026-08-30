@@ -7,6 +7,7 @@ import History from "./components/history/History";
 import ColorBar from "./components/colorbar/ColorBar";
 import TvOff from "./components/tvoff/TvOff";
 import MobileHome from "./components/mobile/MobileHome";
+import MobileHistory from "./components/mobile/MobileHistory";
 
 export default function App() {
   const stream = useWordStream();
@@ -69,7 +70,17 @@ export default function App() {
   };
 
   if (mobile) {
-    return <MobileHome stream={stream} onPower={stream.toggleConnection} onHistory={() => {}} />;
+    return showHistory ? (
+      <MobileHistory
+        words={stream.words}
+        connected={stream.connected}
+        onBack={() => setShowHistory(false)}
+        onClear={stream.clear}
+        onPower={stream.toggleConnection}
+      />
+    ) : (
+      <MobileHome stream={stream} onPower={stream.toggleConnection} onHistory={() => setShowHistory(true)} />
+    );
   }
 
   return (
