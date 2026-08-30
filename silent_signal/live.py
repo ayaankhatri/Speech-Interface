@@ -81,7 +81,58 @@ def slice_absolute(buf: np.ndarray, end_total: int, start: int, length: int) -> 
     return buf[offset : offset + length]
 
 
-def run(reader, sink: Sink = print_sink, speak: bool = True, model_path=cfg.MODEL_PATH) -> int:
+def classify(clf, labels, window: np.ndarray) -> tuple[str, float]:
+    """One window to (word, confidence), through the front end training used."""
+    proba = clf.predict_proba(features_from_raw(window).reshape(1, -1))[0]
+    i = int(np.argmax(proba))
+    return labels[i], float(proba[i])
+
+
+def run_interval(reader, bundle, sink: Sink, speaker, interval_s: float) -> int:
+    """Classify on a fixed timer rather than on muscle onsets.
+
+    Onset detection only fires when the envelope rises, so it stays silent while
+    the wearer is still -- correct for a hands-off interface, wrong for a
+    dashboard that should show something on a regular beat. Here the most recent
+    WINDOW_SAMPLES are classified every `interval_s` and always published.
+
+    The CONF_THRESHOLD gate is deliberately not applied: on a timer there is no
+    claim that a word was spoken, so suppressing low-confidence output would just
+    leave the page blank. The confidence rides along for the page to render, and
+    a low number is information rather than a reason to show nothing.
+    """
+    clf, labels = bundle["clf"], bundle["labels"]
+    next_at = time.monotonic() + interval_s
+    while True:
+        time.sleep(0.02)
+        if time.monotonic() < next_at:
+            continue
+        next_at += interval_s
+
+        window = reader.snapshot(cfg.WINDOW_SAMPLES)
+        if window.shape[0] < cfg.WINDOW_SAMPLES:
+            sink({"kind": "status", "message": "waiting for a full window"})
+            continue
+
+        word, confidence = classify(clf, labels, window)
+        sink(
+            {
+                "kind": "prediction",
+                "word": word,
+                "confidence": confidence,
+                "truth": getattr(reader, "now_playing", None),
+            }
+        )
+        speaker.say(word)
+
+
+def run(
+    reader,
+    sink: Sink = print_sink,
+    speak: bool = True,
+    model_path=cfg.MODEL_PATH,
+    interval_s: float | None = None,
+) -> int:
     bundle = load_model(model_path)
     clf, labels = bundle["clf"], bundle["labels"]
 
@@ -92,11 +143,15 @@ def run(reader, sink: Sink = print_sink, speak: bool = True, model_path=cfg.MODE
     pending: int | None = None
     last_total = 0
 
-    sink({"kind": "status", "message": f"listening on {reader.source} — Ctrl-C to stop"})
+    mode = "onset" if interval_s is None else f"every {interval_s:g}s"
+    sink({"kind": "status", "message": f"listening on {reader.source} ({mode}) — Ctrl-C to stop"})
     try:
         if not reader.wait_for_samples(cfg.BASELINE_SAMPLES, timeout_s=10.0):
             sink({"kind": "status", "message": f"no data: {reader.last_error or 'silent port'}"})
             return 1
+
+        if interval_s is not None:
+            return run_interval(reader, bundle, sink, speaker, interval_s)
 
         while True:
             time.sleep(0.05)
@@ -177,6 +232,13 @@ def add_source_args(ap: argparse.ArgumentParser) -> argparse.ArgumentParser:
     )
     ap.add_argument("--gap", type=float, default=2.0, help="replay: rest seconds between words")
     ap.add_argument("--speed", type=float, default=1.0, help="replay: playback rate multiplier")
+    ap.add_argument(
+        "--interval",
+        type=float,
+        default=None,
+        metavar="SECONDS",
+        help="classify every SECONDS on a timer instead of waiting for muscle onsets",
+    )
     return ap
 
 
@@ -185,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-speak", action="store_true", help="predict without TTS")
     args = ap.parse_args(argv)
     try:
-        return run(build_reader(args), speak=not args.no_speak)
+        return run(build_reader(args), speak=not args.no_speak, interval_s=args.interval)
     except (FileNotFoundError, ValueError) as exc:
         print(exc)
         return 1

@@ -150,7 +150,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  events on http://{args.host}:{args.http_port}/events")
 
     try:
-        return run(reader, sink=sink, speak=not args.no_speak)
+        return run(reader, sink=sink, speak=not args.no_speak, interval_s=args.interval)
     except (FileNotFoundError, ValueError) as exc:
         print(exc)
         return 1
