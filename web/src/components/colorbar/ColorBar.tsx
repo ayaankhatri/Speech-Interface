@@ -1,6 +1,4 @@
 // Color-bar / no-signal screen
-import PowerButton from "../PowerButton";
-
 interface Props {
   onPower: () => void;
 }
@@ -22,7 +20,24 @@ export default function ColorBar({ onPower }: Props) {
       </div>
       <img src="/assets/tv.svg" alt="" className="pointer-events-none absolute inset-0 h-full w-full" />
 
-      <PowerButton onClick={onPower} />
+      <button
+        type="button"
+        onClick={onPower}
+        aria-label="Power"
+        className="absolute outline-none transition-transform duration-100 hover:scale-110 active:scale-95"
+        style={{ left: 610, top: 662, width: 59, height: 56 }}
+      >
+        <span className="relative block h-full w-full">
+          <img
+            src="/assets/stars.svg"
+            alt=""
+            draggable={false}
+            className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none"
+            style={{ width: 92, height: (92 * 108) / 105 }}
+          />
+          <img src="/assets/btn-power.svg" alt="Power" draggable={false} className="absolute inset-0 h-full w-full select-none" />
+        </span>
+      </button>
     </div>
   );
 }
