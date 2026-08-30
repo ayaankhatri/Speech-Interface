@@ -1,4 +1,4 @@
-import { CONTROLS, SCREEN } from "../layout";
+import { CONTROLS, SCREEN } from "../../layout";
 
 interface Props {
   streaming: boolean;
@@ -39,14 +39,12 @@ export default function ControlButtons({
       className="absolute flex items-center justify-center gap-6"
       style={{ left: SCREEN.left, top: CONTROLS.top, width: SCREEN.width, height: CONTROLS.height }}
     >
-      {}
       <button
         type="button"
         onClick={onPower}
         aria-label="Power"
         className="relative outline-none transition-transform duration-100 hover:scale-110 active:scale-95"
       >
-        {}
         <img
           src="/assets/stars.svg"
           alt=""

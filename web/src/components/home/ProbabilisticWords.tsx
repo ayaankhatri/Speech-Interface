@@ -1,4 +1,4 @@
-import { BOX_TEXT, PANEL_INNER_WIDTH } from "../layout";
+import { BOX_TEXT, PANEL_INNER_WIDTH } from "../../layout";
 
 interface Props {
   candidates: string[];

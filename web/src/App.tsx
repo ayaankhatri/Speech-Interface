@@ -1,42 +1,20 @@
+// App shell
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { FRAME, PANEL_LEFT, SCREEN, STICKERS, TITLE } from "./layout";
+import { FRAME } from "./layout";
 import { useWordStream } from "./hooks/useWordStream";
-import { probabilisticWordsFor } from "./vocab";
-import ConnectionStatus from "./components/ConnectionStatus";
-import Panel from "./components/Panel";
-import DetectedWords from "./components/DetectedWords";
-import ProbabilisticWords from "./components/ProbabilisticWords";
-import ControlButtons from "./components/ControlButtons";
-import HistoryScreen from "./components/HistoryScreen";
+import Home from "./components/home/Home";
+import History from "./components/history/History";
+import ColorBar from "./components/colorbar/ColorBar";
+import TvOff from "./components/tvoff/TvOff";
 
 export default function App() {
   const stream = useWordStream();
   const [showHistory, setShowHistory] = useState(false);
+  const [turnOff, setTurnOff] = useState<"idle" | "status" | "screen">("idle");
   const [draft, setDraft] = useState("");
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
-
-  const titleTextRef = useRef<HTMLSpanElement>(null);
-  const [folderPos, setFolderPos] = useState<{ left: number; top: number }>({
-    left: STICKERS.folder.left,
-    top: STICKERS.folder.top,
-  });
-
-  useLayoutEffect(() => {
-    const el = titleTextRef.current;
-    if (!el) return;
-    const place = () => {
-      const rightEdge = SCREEN.left + el.offsetLeft + el.offsetWidth;
-      const bottomEdge = TITLE.top + el.offsetHeight;
-      setFolderPos({ left: rightEdge - 14, top: bottomEdge - STICKERS.folder.height / 2 });
-    };
-    place();
-    const ro = new ResizeObserver(place);
-    ro.observe(el);
-    document.fonts?.ready.then(place).catch(() => {});
-    return () => ro.disconnect();
-  }, []);
 
   useLayoutEffect(() => {
     const el = wrapperRef.current;
@@ -62,68 +40,46 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [stream]);
 
+  const powerOff = () => {
+    setShowHistory(false);
+    if (stream.connected) stream.toggleConnection();
+    setTurnOff("status");
+    window.setTimeout(() => setTurnOff("screen"), 600);
+  };
+
+  const powerOn = () => {
+    if (!stream.connected) stream.toggleConnection();
+    setTurnOff("idle");
+  };
+
   const submitDraft = () => {
     if (!draft.trim()) return;
     stream.addWord(draft);
     setDraft("");
   };
 
-  const candidates = probabilisticWordsFor(stream.latest);
-
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-4 p-4">
       <div ref={wrapperRef} className="flex min-h-0 w-full flex-1 items-center justify-center">
         <div
           className="relative overflow-hidden bg-gradient-to-b from-[#191717] to-[#484645]"
-          style={{
-            width: FRAME.width,
-            height: FRAME.height,
-            transform: `scale(${scale})`,
-            transformOrigin: "center",
-          }}
+          style={{ width: FRAME.width, height: FRAME.height, transform: `scale(${scale})`, transformOrigin: "center" }}
         >
-          <img src="/assets/tv.svg" alt="" className="absolute inset-0 h-full w-full" />
-
-          <Sticker src="/assets/stars.svg" spec={STICKERS.stars} />
-          <Sticker src="/assets/camera.svg" spec={STICKERS.camera} />
-
-          <h1
-            className="absolute text-center font-handjet text-white"
-            style={{ top: TITLE.top, fontSize: TITLE.fontSize, left: SCREEN.left, width: SCREEN.width }}
-          >
-            <span ref={titleTextRef}>Silent Signal</span>
-          </h1>
-
-          <Sticker src="/assets/folder.svg" spec={{ ...STICKERS.folder, ...folderPos }} />
-
-          <ConnectionStatus connected={stream.connected} onToggle={stream.toggleConnection} />
-
-          <Panel left={PANEL_LEFT.detected} label="Detected Word">
-            <DetectedWords words={stream.words} jumpSignal={stream.jumpSignal} />
-          </Panel>
-
-          <Panel left={PANEL_LEFT.probabilistic} label="Probabilistic Words">
-            <ProbabilisticWords candidates={candidates} />
-          </Panel>
-
-          <ControlButtons
-            streaming={stream.streaming}
-            onPower={stream.toggleConnection}
-            onStart={stream.startStream}
-            onStop={stream.stopStream}
-            onHistory={() => setShowHistory((v) => !v)}
-            onClear={stream.clear}
-          />
+          <Home stream={stream} onPower={powerOff} onHistory={() => setShowHistory((v) => !v)} />
 
           {showHistory && (
-            <HistoryScreen
+            <History
               words={stream.words}
               connected={stream.connected}
               onBack={() => setShowHistory(false)}
               onClear={stream.clear}
-              onPower={stream.toggleConnection}
+              onPower={powerOff}
             />
           )}
+
+          {!stream.connected && turnOff === "idle" && <ColorBar onPower={powerOn} />}
+
+          {turnOff === "screen" && <TvOff onDone={() => setTurnOff("idle")} />}
         </div>
       </div>
 
@@ -145,29 +101,5 @@ export default function App() {
         </button>
       </div>
     </div>
-  );
-}
-
-function Sticker({
-  src,
-  spec,
-}: {
-  src: string;
-  spec: { left: number; top: number; width: number; height: number; rotate: number };
-}) {
-  return (
-    <img
-      src={src}
-      alt=""
-      draggable={false}
-      className="pointer-events-none absolute select-none"
-      style={{
-        left: spec.left,
-        top: spec.top,
-        width: spec.width,
-        height: spec.height,
-        transform: `rotate(${spec.rotate}deg)`,
-      }}
-    />
   );
 }
